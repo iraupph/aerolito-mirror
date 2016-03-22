@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "aerolito.magicmirror"
-        minSdkVersion 14
+        minSdkVersion 17
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -18,11 +18,11 @@ android {
         }
     }
     productFlavors {
-        debugging {
-            buildConfigField 'boolean', 'D', 'true'
+        developing {
+            buildConfigField 'boolean', 'DEV', 'true'
         }
-        production {
-            buildConfigField 'boolean', 'D', 'false'
+        demo {
+            buildConfigField 'boolean', 'DEV', 'false'
         }
     }
 }
