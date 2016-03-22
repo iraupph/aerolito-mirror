@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/black"
     android:keepScreenOn="true"
+    android:padding="16dp"
     tools:context=".ui.activity.MainActivity">
 
     <TextView
@@ -14,7 +15,7 @@
         android:layout_centerInParent="true"
         android:gravity="center"
         android:text="HELLO\nHOW\nARE\nYOU"
-        android:textSize="64sp"/>
+        android:textSize="@dimen/material_text_display3"/>
 
     <View
         android:id="@+id/overlay"
@@ -22,5 +23,12 @@
         android:layout_height="match_parent"
         android:background="@android:color/black"
         tools:visibility="gone"/>
+
+    <aerolito.magicmirror.ui.view.CustomDigitalClock
+        android:id="@+id/clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:textSize="@dimen/material_text_display4"/>
 
 </RelativeLayout>

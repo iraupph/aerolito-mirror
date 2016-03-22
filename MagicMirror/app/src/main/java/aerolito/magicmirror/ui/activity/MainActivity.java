@@ -17,11 +17,11 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int HIDE_UI_DELAY = 1000;
 
-    private static final int SLEEP_DELAY = 15 * 1000;
+    private static final int SLEEP_DELAY = !BuildConfig.DEV ? 15 * 1000 : 60 * 1000 * 15;
     private static final int WAKE_UP_DELAY = 0;
 
     private static final int OFF_BRIGHTNESS = 0;
-    private static final int ON_BRIGHTNESS = 89; // Brilho é regulado de 0 até 255 (89 é 35%)
+    private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
     private Handler uiChangesHandler;
 
@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_HEADSETHOOK) {
             // Ligamos a tela (brilho no máximo) e agendamos pra apagar (brilho no mínimo) com um delay
-            if (BuildConfig.D) {
+            if (BuildConfig.DEV) {
                 Toast.makeText(getApplicationContext(), "RECEIVED JACK INPUT!", Toast.LENGTH_SHORT).show();
             }
             wakeUpNow();
@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
         sleepHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (BuildConfig.D) {
+                if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN OFF", Toast.LENGTH_SHORT).show();
                 }
                 ContentResolver cResolver = getApplicationContext().getContentResolver();
@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
                 ContentResolver cResolver = getApplicationContext().getContentResolver();
                 Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
                 overlay.setVisibility(View.GONE);
-                if (BuildConfig.D) {
+                if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
                 }
             }
