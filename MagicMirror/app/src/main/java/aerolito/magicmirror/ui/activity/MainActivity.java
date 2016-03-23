@@ -1,40 +1,29 @@
 package aerolito.magicmirror.ui.activity;
 
 import android.content.ContentResolver;
-import android.location.Address;
-import android.location.Geocoder;
-import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.yayandroid.locationmanager.LocationBaseActivity;
-import com.yayandroid.locationmanager.LocationConfiguration;
-import com.yayandroid.locationmanager.LocationManager;
-import com.yayandroid.locationmanager.constants.FailType;
-import com.yayandroid.locationmanager.constants.LogType;
-import com.yayandroid.locationmanager.constants.ProviderType;
-
-import java.io.IOException;
-import java.text.DateFormatSymbols;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.List;
-import java.util.Locale;
 
 import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
+import aerolito.magicmirror.module.DateHelper;
+import aerolito.magicmirror.module.WikipediaParser;
+import aerolito.magicmirror.util.L;
 
-public class MainActivity extends LocationBaseActivity {
+public class MainActivity extends LocationActivity {
 
     private static final String TAG = MainActivity.class.getName();
+
+    public L log;
 
     private static final int HIDE_UI_DELAY = 1000;
 
@@ -44,10 +33,6 @@ public class MainActivity extends LocationBaseActivity {
     private static final int OFF_BRIGHTNESS = 0;
     private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
-    private static final String[] WEEKDAYS = new String[]{"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
-
-    private SimpleDateFormat dateFormat;
-
     private Handler uiChangesHandler;
 
     private Handler wakeUpHandler;
@@ -55,6 +40,8 @@ public class MainActivity extends LocationBaseActivity {
 
     private View overlay;
     private TextView location;
+
+    private DateHelper dateHelper = DateHelper.getInstance();
     private TextView date;
 
 
@@ -62,6 +49,8 @@ public class MainActivity extends LocationBaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        log = L.getInstance(getApplicationContext());
 
         // View que fica por cima do nosso conteúdo
         overlay = findViewById(R.id.overlay);
@@ -85,11 +74,17 @@ public class MainActivity extends LocationBaseActivity {
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
 
+        WikipediaParser.execute(new WikipediaParser.OnWikipediaProcessedListener() {
+            @Override
+            public void onLatestEventsProcessed(List<String> latestEvents) {
+                log.i(TAG, "onLatestEventsProcessed: ");
+            }
 
-        DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(Locale.getDefault());
-        dateFormatSymbols.setWeekdays(WEEKDAYS);
-        dateFormat = new SimpleDateFormat("EEEE', 'd ' de 'MMMM", Locale.getDefault());
-        dateFormat.setDateFormatSymbols(dateFormatSymbols);
+            @Override
+            public void onTodayHistoryEventsProcessed(List<String> todayHistoryEvents) {
+                log.i(TAG, "onTodayHistoryEventsProcessed: ");
+            }
+        });
     }
 
     @Override
@@ -99,15 +94,7 @@ public class MainActivity extends LocationBaseActivity {
         wakeUpNow();
         refreshScheduledSleep();
 
-        getLocation();
-        getDate();
-    }
-
-    private void getDate() {
-        String date = dateFormat.format(Calendar.getInstance().getTime());
-        if (date != null) {
-            toggleTextView(this.date, View.VISIBLE, date);
-        }
+        updateDate();
     }
 
     @Override
@@ -121,80 +108,6 @@ public class MainActivity extends LocationBaseActivity {
             refreshScheduledSleep();
         }
         return true;
-    }
-
-    @Override
-    public LocationConfiguration getLocationConfiguration() {
-        if (BuildConfig.DEV) {
-            LocationManager.setLogType(LogType.GENERAL);
-        }
-
-        return new LocationConfiguration()
-                .keepTracking(false)
-                .useOnlyGPServices(false)
-                .askForGooglePlayServices(true)
-                .failOnConnectionSuspended(false)
-                .doNotUseGooglePlayServices(false)
-                .askForEnableGPS(true)
-                .setMinAccuracy(200.0f)
-                .setWaitPeriod(ProviderType.GOOGLE_PLAY_SERVICES, 5 * 1000)
-                .setWaitPeriod(ProviderType.GPS, 15 * 1000)
-                .setWaitPeriod(ProviderType.NETWORK, 10 * 1000)
-                .setGPSMessage("Por favor habilite o GPS?")
-                .setRationalMessage("Permissão necessária.");
-    }
-
-    @Override
-    public void onLocationFailed(int failType) {
-        String message = "Location failed...";
-        switch (failType) {
-            case FailType.PERMISSION_DENIED: {
-                message = "Couldn't get location, because user didn't give permission!";
-                break;
-            }
-            case FailType.GP_SERVICES_NOT_AVAILABLE:
-            case FailType.GP_SERVICES_CONNECTION_FAIL: {
-                message = "Couldn't get location, because Google Play Services not available!";
-                break;
-            }
-            case FailType.NETWORK_NOT_AVAILABLE: {
-                message = "Couldn't get location, because network is not accessible!";
-                break;
-            }
-            case FailType.TIMEOUT: {
-                message = "Couldn't get location, and timeout!";
-                break;
-            }
-        }
-        Log.e(TAG, "onLocationFailed: " + message);
-        toggleTextView(this.location, View.GONE, null);
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        Log.i(TAG, "onLocationChanged: " + location.toString());
-        String locationStr = null;
-        try {
-            List<Address> addresses = new Geocoder(getApplicationContext(), Locale.getDefault()).getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-            if (addresses != null && !addresses.isEmpty()) {
-                Address address = addresses.get(0);
-                // Supostamente é o nome da cidade nessa função ;-)
-                String locality = address.getLocality();
-                if (locality != null) {
-                    locationStr = locality;
-                }
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "onLocationChanged: " + e.getMessage());
-        }
-        toggleTextView(this.location, locationStr != null ? View.VISIBLE : View.GONE, locationStr);
-    }
-
-    private void toggleTextView(TextView view, int visibility, @Nullable String text) {
-        view.setVisibility(visibility);
-        if (text != null) {
-            view.setText(text);
-        }
     }
 
     /**
@@ -248,5 +161,22 @@ public class MainActivity extends LocationBaseActivity {
                 getWindow().getDecorView().setSystemUiVisibility(systemUiFlagHideNavigation);
             }
         }, HIDE_UI_DELAY);
+    }
+
+    private void toggleTextView(TextView view, int visibility, @Nullable String text) {
+        view.setVisibility(visibility);
+        if (text != null) {
+            view.setText(text);
+        }
+    }
+
+    private void updateDate() {
+        String date = dateHelper.getDate();
+        toggleTextView(this.date, date != null ? View.VISIBLE : View.GONE, date);
+    }
+
+    @Override
+    public void onHasBestLocation(String location) {
+        toggleTextView(this.location, location != null ? View.VISIBLE : View.GONE, location);
     }
 }
