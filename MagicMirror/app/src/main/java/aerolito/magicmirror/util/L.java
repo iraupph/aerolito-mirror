@@ -22,28 +22,39 @@ public class L {
     private final String TAG = L.class.getName();
 
     public void i(String msg) {
-        if (BuildConfig.DEV) {
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
-        }
-        Log.i(TAG, msg);
+        i(msg, false);
+    }
+
+    public void i(String msg, boolean disableToast) {
+        i(TAG, msg, disableToast);
     }
 
     public void i(String tag, String msg) {
-        if (BuildConfig.DEV) {
+        i(tag, msg, false);
+    }
+
+
+    public void i(String tag, String msg, boolean disableToast) {
+        if (BuildConfig.DEV && !disableToast) {
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
         }
         Log.i(tag, msg);
     }
 
     public void e(String msg) {
-        if (BuildConfig.DEV) {
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
-        }
-        Log.e(TAG, msg);
+        e(msg, false);
+    }
+
+    public void e(String msg, boolean disableToast) {
+        e(TAG, msg, disableToast);
     }
 
     public void e(String tag, String msg) {
-        if (BuildConfig.DEV) {
+        e(tag, msg, false);
+    }
+
+    public void e(String tag, String msg, boolean disableToast) {
+        if (BuildConfig.DEV && !disableToast) {
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
         }
         Log.e(tag, msg);

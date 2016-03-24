@@ -1,6 +1,7 @@
 package aerolito.magicmirror.ui.activity;
 
 import android.content.ContentResolver;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -8,10 +9,17 @@ import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.TranslateAnimation;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
@@ -44,6 +52,12 @@ public class MainActivity extends LocationActivity {
     private DateHelper dateHelper = DateHelper.getInstance();
     private TextView date;
 
+    private WikipediaParser wikipediaHelper = WikipediaParser.getInstance();
+    private TextView infoTitle;
+    private TextView infoContent;
+    private List<Map.Entry<String, String>> news;
+    private Animation scrollHorizontallyAnimation;
+    private AsyncTask<Void, Map.Entry<String, String>, Void> eventsTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +68,9 @@ public class MainActivity extends LocationActivity {
 
         // View que fica por cima do nosso conteúdo
         overlay = findViewById(R.id.overlay);
+
+        infoTitle = (TextView) findViewById(R.id.info_title);
+        infoContent = (TextView) findViewById(R.id.info_content);
 
         location = (TextView) findViewById(R.id.location);
         date = (TextView) findViewById(R.id.date);
@@ -73,18 +90,6 @@ public class MainActivity extends LocationActivity {
         uiChangesHandler = new Handler();
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
-
-        WikipediaParser.execute(new WikipediaParser.OnWikipediaProcessedListener() {
-            @Override
-            public void onLatestEventsProcessed(List<String> latestEvents) {
-                log.i(TAG, "onLatestEventsProcessed: ");
-            }
-
-            @Override
-            public void onTodayHistoryEventsProcessed(List<String> todayHistoryEvents) {
-                log.i(TAG, "onTodayHistoryEventsProcessed: ");
-            }
-        });
     }
 
     @Override
@@ -95,6 +100,8 @@ public class MainActivity extends LocationActivity {
         refreshScheduledSleep();
 
         updateDate();
+
+        wikipediaHelper.execute(new OnWikipediaProcessedListener());
     }
 
     @Override
@@ -139,7 +146,7 @@ public class MainActivity extends LocationActivity {
             public void run() {
                 ContentResolver cResolver = getApplicationContext().getContentResolver();
                 Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
-                overlay.setVisibility(View.GONE);
+                overlay.setVisibility(View.INVISIBLE);
                 if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
                 }
@@ -178,5 +185,125 @@ public class MainActivity extends LocationActivity {
     @Override
     public void onHasBestLocation(String location) {
         toggleTextView(this.location, location != null ? View.VISIBLE : View.GONE, location);
+    }
+
+    private class OnWikipediaProcessedListener implements WikipediaParser.OnWikipediaProcessedListener {
+
+        private static final String RECENT_EVENT = "Eventos recentes";
+        private static final String HISTORY = "O dia na história";
+        private static final String BORN = "Nasceu neste dia";
+        private static final String DIED = "Faleceu neste dia";
+
+        private List<Map.Entry<String, String>> temporaryNews;
+
+        private OnWikipediaProcessedListener() {
+            this.temporaryNews = new ArrayList<>();
+        }
+
+        @Override
+        public void onLatestEventsProcessed(List<String> latestEvents) {
+            log.i(TAG, "onLatestEventsProcessed");
+            for (String event : latestEvents) {
+                temporaryNews.add(new AbstractMap.SimpleEntry<>(RECENT_EVENT, event));
+            }
+        }
+
+        @Override
+        public void onTodayHistoryEventsProcessed(List<String> history, List<String> born, List<String> deaths) {
+            log.i(TAG, "onTodayHistoryEventsProcessed");
+            for (String h : history) {
+                temporaryNews.add(new AbstractMap.SimpleEntry<>(HISTORY, h));
+            }
+            for (String b : born) {
+                temporaryNews.add(new AbstractMap.SimpleEntry<>(BORN, b));
+            }
+            for (String d : deaths) {
+                temporaryNews.add(new AbstractMap.SimpleEntry<>(DIED, d));
+            }
+            // Preenchemos separadamente as notícias nesse cara temporários depois substituimos o principal da classe
+            // Essa função é chamada sequencialmente por último então é de boa substituir aqui
+            if (temporaryNews.size() > 0) {
+                news = temporaryNews;
+            }
+            if (eventsTask == null) {
+                eventsTask = new EventsTask().execute();
+            }
+        }
+    }
+
+    private class EventsTask extends AsyncTask<Void, Map.Entry<String, String>, Void> {
+
+        private boolean isRunning;
+        private boolean isDisplayingEvent;
+
+        private EventsTask() {
+            this.isRunning = true;
+            this.isDisplayingEvent = false;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            log.i(TAG, "EventsTask#doInBackground", true);
+            while (isRunning) {
+                int newPosition = new Random().nextInt(news.size());
+                for (int i = 0; i < news.size(); i++) {
+                    Map.Entry<String, String> entry = news.get(i);
+                    if (i == newPosition && !isDisplayingEvent) {
+                        isDisplayingEvent = true;
+                        publishProgress(entry);
+                        break;
+                    }
+                }
+                while (isDisplayingEvent) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        log.e(TAG, "EventsTask#doInBackground", true);
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Map.Entry<String, String>... values) {
+            super.onProgressUpdate(values);
+            for (Map.Entry<String, String> nextNews : values) {
+                log.i(TAG, String.format("updateInfo %s - %s", nextNews.getKey(), nextNews.getValue()));
+                toggleTextView(infoTitle, View.VISIBLE, nextNews.getKey());
+                toggleTextView(infoContent, View.INVISIBLE, nextNews.getValue());
+                infoContent.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Scroll de fora da tela até um pouco mais por trás do título
+                        int fullScreenWidth = overlay.getMeasuredWidth();
+                        scrollHorizontallyAnimation = new TranslateAnimation(fullScreenWidth, (float) (-fullScreenWidth * 0.5), 0, 0);
+                        scrollHorizontallyAnimation.setInterpolator(new LinearInterpolator());
+                        scrollHorizontallyAnimation.setDuration((long) (infoContent.getText().toString().length() * 0.8 * 1000));
+                        scrollHorizontallyAnimation.setAnimationListener(new Animation.AnimationListener() {
+                            @Override
+                            public void onAnimationStart(Animation animation) {
+                                /* Deixa INVISIBLE quando seta o texto pra não dar o flicker da posição original
+                                e quando deslocamos pra fora antes de começar a animação, daí aqui já pode mostrar
+                                pq ele já tá fora da tela ;-) */
+                                toggleTextView(infoContent, View.VISIBLE, null);
+                            }
+
+                            @Override
+                            public void onAnimationEnd(Animation animation) {
+                                isDisplayingEvent = false;
+                                // Isso tira mais um flicker que não sei pq acontece :>
+                                toggleTextView(infoContent, View.INVISIBLE, null);
+                            }
+
+                            @Override
+                            public void onAnimationRepeat(Animation animation) {
+                            }
+                        });
+                        infoContent.setAnimation(scrollHorizontallyAnimation);
+                    }
+                });
+            }
+        }
     }
 }

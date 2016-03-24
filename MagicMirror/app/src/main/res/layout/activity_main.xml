@@ -6,48 +6,85 @@
     android:layout_height="match_parent"
     android:background="@android:color/black"
     android:keepScreenOn="true"
-    android:padding="16dp"
     tools:context=".ui.activity.MainActivity">
 
-    <TextView
-        android:id="@+id/location"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentTop="true"
-        android:gravity="end"
-        android:textAllCaps="true"
-        android:textSize="@dimen/material_text_display2"
-        android:visibility="gone"
-        tools:text="Porto Alegre"
-        tools:visibility="visible"/>
+        android:layout_height="match_parent"
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/date"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_below="@id/location"
-        android:gravity="end"
-        android:textAllCaps="true"
-        android:textSize="@dimen/material_text_display2"
-        android:visibility="gone"
-        tools:text="Quarta, 25 de Setembro"
-        tools:visibility="visible"/>
+        <TextView
+            android:id="@+id/location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:gravity="end"
+            android:textAllCaps="true"
+            android:textSize="@dimen/material_text_display2"
+            android:visibility="gone"
+            tools:text="Porto Alegre"
+            tools:visibility="visible"/>
 
-    <aerolito.magicmirror.ui.view.CustomDigitalClock
-        android:id="@+id/clock"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_below="@id/date"
-        android:textSize="@dimen/material_text_display4"/>
+        <TextView
+            android:id="@+id/date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_below="@id/location"
+            android:gravity="end"
+            android:textAllCaps="true"
+            android:textSize="@dimen/material_text_display2"
+            android:visibility="gone"
+            tools:text="Quarta, 25 de Setembro"
+            tools:visibility="visible"/>
+
+        <aerolito.magicmirror.ui.view.CustomDigitalClock
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_below="@id/date"
+            android:textSize="@dimen/material_text_display4"/>
+
+        <!-- Hack no 'maxLength' pra aumentar o número de caracteres sem quebrar a linha (cortar o texto) -->
+        <TextView
+            android:id="@+id/info_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:gravity="start"
+            android:maxLength="512"
+            android:paddingEnd="0dp"
+            android:paddingStart="8dp"
+            android:textSize="@dimen/material_text_caption"
+            android:visibility="gone"
+            tools:text="Aqui vamos ter uma mensagem bem longa, que pode ser maior que a largura da tela, nesse caso, espero que ela scrolleie de um lado pro outro."
+            tools:visibility="visible"/>
+
+        <TextView
+            android:id="@+id/info_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentStart="true"
+            android:background="@android:color/black"
+            android:gravity="start"
+            android:paddingEnd="8dp"
+            android:paddingStart="0dp"
+            android:textAllCaps="true"
+            android:textSize="@dimen/material_text_caption"
+            android:visibility="gone"
+            tools:text="Eventos recentes"
+            tools:visibility="visible"/>
+
+    </RelativeLayout>
 
     <View
         android:id="@+id/overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@android:color/black"
-        tools:visibility="gone"/>
+        tools:visibility="invisible"/>
 
 </RelativeLayout>

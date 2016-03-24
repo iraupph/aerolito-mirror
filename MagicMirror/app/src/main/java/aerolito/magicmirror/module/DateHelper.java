@@ -16,7 +16,7 @@ public class DateHelper {
     public static DateHelper getInstance() {
         return instance;
     }
-
+    
     public DateHelper() {
         DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(Locale.getDefault());
         dateFormatSymbols.setWeekdays(WEEKDAYS);
