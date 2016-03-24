@@ -22,7 +22,7 @@
             android:gravity="end"
             android:textAllCaps="true"
             android:textSize="@dimen/material_text_display2"
-            android:visibility="gone"
+            android:visibility="invisible"
             tools:text="Porto Alegre"
             tools:visibility="visible"/>
 
@@ -35,7 +35,7 @@
             android:gravity="end"
             android:textAllCaps="true"
             android:textSize="@dimen/material_text_display2"
-            android:visibility="gone"
+            android:visibility="invisible"
             tools:text="Quarta, 25 de Setembro"
             tools:visibility="visible"/>
 
@@ -63,6 +63,59 @@
 
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/visitors"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/forecasts"
+            android:layout_marginTop="56dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Você é o visitante número"
+                android:textAllCaps="true"
+                android:textSize="@dimen/material_text_display1"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <include layout="@layout/view_visitor_count"/>
+
+                <include layout="@layout/view_visitor_count"/>
+
+                <include layout="@layout/view_visitor_count"/>
+
+                <include layout="@layout/view_visitor_count"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/compliment_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="E hoje você está"
+                android:textAllCaps="true"
+                android:textSize="@dimen/material_text_display1"
+                android:visibility="invisible"
+                tools:visibility="visible"/>
+
+            <com.romainpiel.shimmer.ShimmerTextView
+                android:id="@+id/compliment_content"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Radiante"
+                android:textAllCaps="true"
+                android:textSize="@dimen/material_text_display3"
+                android:visibility="invisible"
+                tools:text="Radiante"
+                tools:visibility="visible"/>
+
+        </LinearLayout>
+
         <!-- Hack no 'maxLength' pra aumentar o número de caracteres sem quebrar a linha (cortar o texto) -->
         <TextView
             android:id="@+id/info_content"
@@ -74,8 +127,8 @@
             android:paddingEnd="0dp"
             android:paddingStart="8dp"
             android:singleLine="true"
-            android:textSize="@dimen/material_text_caption"
-            android:visibility="gone"
+            android:textSize="@dimen/material_text_title"
+            android:visibility="invisible"
             tools:text="Aqui vamos ter uma mensagem bem longa, que pode ser maior que a largura da tela, nesse caso, espero que ela faça scroll de um lado pro outro e ao sair da tela, carregue a próxima"
             tools:visibility="visible"/>
 
@@ -90,8 +143,8 @@
             android:paddingEnd="8dp"
             android:paddingStart="0dp"
             android:textAllCaps="true"
-            android:textSize="@dimen/material_text_caption"
-            android:visibility="gone"
+            android:textSize="@dimen/material_text_title"
+            android:visibility="invisible"
             tools:text="Eventos recentes"
             tools:visibility="visible"/>
 

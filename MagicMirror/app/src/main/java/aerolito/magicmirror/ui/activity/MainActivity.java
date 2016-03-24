@@ -1,5 +1,6 @@
 package aerolito.magicmirror.ui.activity;
 
+import android.animation.ValueAnimator;
 import android.content.ContentResolver;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -19,9 +20,16 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.orhanobut.hawk.Hawk;
+import com.orhanobut.hawk.HawkBuilder;
+import com.orhanobut.hawk.LogLevel;
+import com.romainpiel.shimmer.Shimmer;
+import com.romainpiel.shimmer.ShimmerTextView;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
@@ -46,6 +54,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     private static final int OFF_BRIGHTNESS = 0;
     private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
+    private static final int VISITOR_DELAY = 1000;
+
     private Handler uiChangesHandler;
 
     private Handler wakeUpHandler;
@@ -66,7 +76,6 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
 
     private WeatherHelper weatherHelper = WeatherHelper.getInstance();
     private LinearLayout forecastsParent;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +110,14 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         uiChangesHandler = new Handler();
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
+
+        HawkBuilder hawkBuilder = Hawk.init(this)
+                .setEncryptionMethod(HawkBuilder.EncryptionMethod.NO_ENCRYPTION)
+                .setStorage(HawkBuilder.newSharedPrefStorage(this));
+        if (BuildConfig.DEV) {
+            hawkBuilder = hawkBuilder.setLogLevel(LogLevel.FULL);
+        }
+        hawkBuilder.build();
     }
 
     @Override
@@ -113,6 +130,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         updateDate();
 
         wikipediaHelper.execute(new OnWikipediaProcessedListener());
+
+        updateVisitors();
     }
 
     @Override
@@ -190,12 +209,12 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
 
     private void updateDate() {
         String date = dateHelper.getDate();
-        toggleTextView(this.date, date != null ? View.VISIBLE : View.GONE, date);
+        toggleTextView(this.date, date != null ? View.VISIBLE : View.INVISIBLE, date);
     }
 
     @Override
     public void onHasBestLocation(String city, String country) {
-        toggleTextView(this.location, city != null ? View.VISIBLE : View.GONE, city);
+        toggleTextView(this.location, city != null ? View.VISIBLE : View.INVISIBLE, city);
         weatherHelper.requestForecast(city, country, this);
     }
 
@@ -214,6 +233,62 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
 
             forecastView.setVisibility(View.VISIBLE);
         }
+    }
+
+    private String[] COMPLIMENTS = new String[]{
+            "RADIANTE", "SEXY", "ESPETACULAR", "SENSUAL", "UM ESTOURO", "ESTONTEANTE", "FENOMENAL",
+            "ELEGANTE", "SEM IGUAL", "FODA", "INCRÍVEL", "COM TUDO EM CIMA", "UM ARRASO", "COM TUDO",
+            "O MÁXIMO", "EXCELENTE", "AMÁVEL", "PEGÁVEL", "TRANSÁVEL"
+    };
+
+    private void updateVisitors() {
+        LinearLayout visitorsParent = (LinearLayout) findViewById(R.id.visitors);
+        for (int i = 0; i < ((LinearLayout) visitorsParent.getChildAt(1)).getChildCount(); i++) {
+            ((LinearLayout) visitorsParent.getChildAt(1)).getChildAt(i).setVisibility(View.INVISIBLE);
+        }
+        findViewById(R.id.compliment_title).setVisibility(View.INVISIBLE);
+        findViewById(R.id.compliment_content).setVisibility(View.INVISIBLE);
+        int visitors = Hawk.get("visitors", 0) + 1;
+        Hawk.put("visitors", visitors);
+        String visitorsStr = String.format(Locale.getDefault(), "%04d", visitors);
+        setDelayedVisitorDigit(visitorsStr.length() - 1, visitorsStr, visitorsParent);
+    }
+
+    private void setDelayedVisitorDigit(final int visitorPosition, final String visitorsStr, final LinearLayout visitorsParent) {
+        final TextView visitorDigit = (TextView) ((LinearLayout) visitorsParent.getChildAt(1)).getChildAt(visitorPosition);
+        visitorDigit.setVisibility(View.INVISIBLE);
+        visitorDigit.setText(String.valueOf(visitorsStr.charAt(visitorPosition)));
+        visitorDigit.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                visitorDigit.setVisibility(View.VISIBLE);
+                if (visitorPosition > 0) {
+                    setDelayedVisitorDigit(visitorPosition - 1, visitorsStr, visitorsParent);
+                } else {
+                    final TextView complimentTitle = (TextView) findViewById(R.id.compliment_title);
+                    final ShimmerTextView complimentContent = (ShimmerTextView) findViewById(R.id.compliment_content);
+                    complimentTitle.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            complimentTitle.setVisibility(View.VISIBLE);
+                            complimentContent.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    complimentContent.setVisibility(View.VISIBLE);
+                                    complimentContent.setText(COMPLIMENTS[new Random().nextInt(COMPLIMENTS.length)]);
+                                    Shimmer shimmer = new Shimmer();
+                                    shimmer.setRepeatCount(ValueAnimator.INFINITE)
+                                            .setDuration(1000)
+                                            .setStartDelay(500)
+                                            .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
+                                    shimmer.start(complimentContent);
+                                }
+                            }, VISITOR_DELAY);
+                        }
+                    }, VISITOR_DELAY);
+                }
+            }
+        }, VISITOR_DELAY);
     }
 
     private class OnWikipediaProcessedListener implements WikipediaParser.OnWikipediaProcessedListener {

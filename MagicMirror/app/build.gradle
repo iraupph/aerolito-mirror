@@ -41,4 +41,8 @@ dependencies {
     compile 'com.squareup.retrofit2:retrofit:2.0.0-beta3'
     compile 'com.squareup.okhttp3:logging-interceptor:3.0.0-RC1'
     compile 'com.squareup.retrofit2:converter-gson:2.0.0-beta3'
+
+    compile 'com.github.orhanobut:hawk:1.21'
+
+    compile 'com.romainpiel.shimmer:library:1.4.0@aar'
 }
