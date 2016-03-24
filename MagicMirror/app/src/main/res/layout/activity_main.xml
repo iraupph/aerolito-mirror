@@ -47,6 +47,22 @@
             android:layout_below="@id/date"
             android:textSize="@dimen/material_text_display4"/>
 
+        <LinearLayout
+            android:id="@+id/forecasts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/clock"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <include layout="@layout/view_forecast"/>
+
+            <include layout="@layout/view_forecast"/>
+
+            <include layout="@layout/view_forecast"/>
+
+        </LinearLayout>
+
         <!-- Hack no 'maxLength' pra aumentar o número de caracteres sem quebrar a linha (cortar o texto) -->
         <TextView
             android:id="@+id/info_content"
@@ -57,9 +73,10 @@
             android:maxLength="512"
             android:paddingEnd="0dp"
             android:paddingStart="8dp"
+            android:singleLine="true"
             android:textSize="@dimen/material_text_caption"
             android:visibility="gone"
-            tools:text="Aqui vamos ter uma mensagem bem longa, que pode ser maior que a largura da tela, nesse caso, espero que ela scrolleie de um lado pro outro."
+            tools:text="Aqui vamos ter uma mensagem bem longa, que pode ser maior que a largura da tela, nesse caso, espero que ela faça scroll de um lado pro outro e ao sair da tela, carregue a próxima"
             tools:visibility="visible"/>
 
         <TextView
@@ -85,6 +102,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@android:color/black"
-        tools:visibility="invisible"/>
+        android:visibility="invisible"
+        tools:visibility="gone"/>
 
 </RelativeLayout>

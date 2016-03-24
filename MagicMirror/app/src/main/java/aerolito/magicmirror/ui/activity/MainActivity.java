@@ -7,11 +7,15 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
+import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,10 +28,11 @@ import java.util.Random;
 import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
 import aerolito.magicmirror.module.DateHelper;
+import aerolito.magicmirror.module.WeatherHelper;
 import aerolito.magicmirror.module.WikipediaParser;
 import aerolito.magicmirror.util.L;
 
-public class MainActivity extends LocationActivity {
+public class MainActivity extends LocationActivity implements WeatherHelper.OnWeatherListener {
 
     private static final String TAG = MainActivity.class.getName();
 
@@ -59,6 +64,10 @@ public class MainActivity extends LocationActivity {
     private Animation scrollHorizontallyAnimation;
     private AsyncTask<Void, Map.Entry<String, String>, Void> eventsTask;
 
+    private WeatherHelper weatherHelper = WeatherHelper.getInstance();
+    private LinearLayout forecastsParent;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,6 +83,8 @@ public class MainActivity extends LocationActivity {
 
         location = (TextView) findViewById(R.id.location);
         date = (TextView) findViewById(R.id.date);
+
+        forecastsParent = (LinearLayout) findViewById(R.id.forecasts);
 
         // Listener pra caso alguém toque na tela esconder as barras do sistema que vão aparecer
         getWindow().getDecorView().setOnSystemUiVisibilityChangeListener
@@ -183,8 +194,26 @@ public class MainActivity extends LocationActivity {
     }
 
     @Override
-    public void onHasBestLocation(String location) {
-        toggleTextView(this.location, location != null ? View.VISIBLE : View.GONE, location);
+    public void onHasBestLocation(String city, String country) {
+        toggleTextView(this.location, city != null ? View.VISIBLE : View.GONE, city);
+        weatherHelper.requestForecast(city, country, this);
+    }
+
+    @Override
+    public void onWeatherResponse(List<Pair<String, Pair<String, Integer>>> response) {
+        for (int i = 0; i < forecastsParent.getChildCount(); i++) {
+            ViewGroup forecastView = (ViewGroup) forecastsParent.getChildAt(i);
+            TextView dateView = (TextView) forecastView.getChildAt(0);
+            ImageView iconView = (ImageView) forecastView.getChildAt(1);
+            TextView temperatureView = (TextView) forecastView.getChildAt(2);
+
+            Pair<String, Pair<String, Integer>> forecastData = response.get(i);
+            dateView.setText(forecastData.first);
+            iconView.setImageResource(forecastData.second.second);
+            temperatureView.setText(forecastData.second.first);
+
+            forecastView.setVisibility(View.VISIBLE);
+        }
     }
 
     private class OnWikipediaProcessedListener implements WikipediaParser.OnWikipediaProcessedListener {
@@ -226,7 +255,7 @@ public class MainActivity extends LocationActivity {
                 news = temporaryNews;
             }
             if (eventsTask == null) {
-                eventsTask = new EventsTask().execute();
+                eventsTask = new EventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
             }
         }
     }
@@ -243,7 +272,7 @@ public class MainActivity extends LocationActivity {
 
         @Override
         protected Void doInBackground(Void... voids) {
-            log.i(TAG, "EventsTask#doInBackground", true);
+            log.i(TAG, "Started events display", true);
             while (isRunning) {
                 int newPosition = new Random().nextInt(news.size());
                 for (int i = 0; i < news.size(); i++) {
@@ -258,7 +287,7 @@ public class MainActivity extends LocationActivity {
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
-                        log.e(TAG, "EventsTask#doInBackground", true);
+                        log.e(TAG, "EventsTask#doInBackground: " + e.getMessage(), true);
                     }
                 }
             }

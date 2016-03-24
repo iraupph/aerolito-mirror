@@ -32,12 +32,17 @@ public abstract class LocationActivity extends LocationBaseActivity {
 
     public L log;
 
+    private String city;
+    private String country;
     private boolean hasLocality;
+    private Handler locationHandler;
+    private FinalizeLocationRunnable locationRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         log = L.getInstance(getApplicationContext());
+        locationHandler = new Handler();
     }
 
     @Override
@@ -46,15 +51,8 @@ public abstract class LocationActivity extends LocationBaseActivity {
         hasLocality = false;
         getLocation();
         // Desabilita a busca por localização depois do timeout de todos os providers
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (getLocationManager().isWaitingForLocation()) {
-                    log.i(TAG, "Cancelling location tracking after providers wait period");
-                    getLocationManager().cancel();
-                }
-            }
-        }, PROVIDER_WAIT_PERIOD * PROVIDERS.length + PROVIDER_WAIT_PERIOD);
+        locationRunnable = new FinalizeLocationRunnable();
+        locationHandler.postDelayed(locationRunnable, PROVIDER_WAIT_PERIOD * PROVIDERS.length);
     }
 
     @Override
@@ -110,28 +108,42 @@ public abstract class LocationActivity extends LocationBaseActivity {
     public void onLocationChanged(Location location) {
         log.i(TAG, "onLocationChanged: " + location.toString());
         if (!hasLocality) {
-            String locationStr = null;
             try {
-                List<Address> addresses = new Geocoder(getApplicationContext(), Locale.getDefault()).getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                List<Address> addresses = new Geocoder(getApplicationContext(),
+                        Locale.getDefault()).getFromLocation(location.getLatitude(), location.getLongitude(), 1);
                 if (addresses != null && !addresses.isEmpty()) {
                     Address address = addresses.get(0);
                     // Supostamente é o nome da cidade nessa função ;-)
                     String locality = address.getLocality();
+                    country = address.getCountryName();
                     if (locality != null) {
-                        locationStr = locality;
+                        city = locality;
                         hasLocality = true;
-                        log.i(TAG, "Found locality, stopping location tracking");
-                        getLocationManager().cancel();
+                        log.i(TAG, "Found locality!");
+                        finalizeLocation();
                     } else {
-                        locationStr = address.getAddressLine(CITY_ADDRESS_LINE);
+                        city = address.getAddressLine(CITY_ADDRESS_LINE);
                     }
                 }
             } catch (IOException e) {
-                log.e(TAG, "onLocationChanged: " + e.getMessage());
+                log.e(TAG, "onLocationChanged " + e.getMessage());
             }
-            onHasBestLocation(locationStr);
         }
     }
 
-    public abstract void onHasBestLocation(String location);
+    private void finalizeLocation() {
+        log.i(TAG, "Cancelling location tracking after providers wait period");
+        getLocationManager().cancel();
+        onHasBestLocation(city, country);
+    }
+
+    public abstract void onHasBestLocation(String location, String country);
+
+    private class FinalizeLocationRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            finalizeLocation();
+        }
+    }
 }

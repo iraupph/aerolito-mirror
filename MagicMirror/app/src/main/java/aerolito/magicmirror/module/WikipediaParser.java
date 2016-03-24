@@ -90,7 +90,7 @@ public class WikipediaParser {
                     Document doc = Jsoup.connect(url).get();
                     publishProgress(doc);
                 } catch (IOException e) {
-                    Log.e(TAG, "doInBackground: " + e.getMessage());
+                    Log.e(TAG, "WikipediaTask#doInBackground: " + e.getMessage());
                     return false;
                 }
             }
