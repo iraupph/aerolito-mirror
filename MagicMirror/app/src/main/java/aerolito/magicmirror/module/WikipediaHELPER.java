@@ -12,9 +12,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WikipediaParser {
+public class WikipediaHelper {
 
-    private static final String TAG = WikipediaParser.class.getName();
+    private static final String TAG = WikipediaHelper.class.getName();
 
     public static final String URL_WIKIPEDIA_HOME = "https://pt.wikipedia.org/";
 
@@ -22,9 +22,9 @@ public class WikipediaParser {
     public static final String TODAY_LISTS = ".plainlinks ul";
     public static final String ITEMS = "li";
 
-    private static WikipediaParser instance = new WikipediaParser();
+    private static WikipediaHelper instance = new WikipediaHelper();
 
-    public static WikipediaParser getInstance() {
+    public static WikipediaHelper getInstance() {
         return instance;
     }
 
@@ -42,14 +42,14 @@ public class WikipediaParser {
             @Override
             public void onLoaded(Document document) {
                 List<String> events = null;
-                Elements elementsEvents = document.select(WikipediaParser.EVENTS);
+                Elements elementsEvents = document.select(WikipediaHelper.EVENTS);
                 if (elementsEvents.size() > 0) {
                     events = processItems(elementsEvents.get(0));
                 }
                 onWikipediaProcessedListener.onLatestEventsProcessed(events);
 
                 List<String> history = null, born = null, deaths = null;
-                Elements elementsTodayLists = document.select(WikipediaParser.TODAY_LISTS);
+                Elements elementsTodayLists = document.select(WikipediaHelper.TODAY_LISTS);
                 switch (elementsTodayLists.size()) {
                     case 3:
                         history = processItems(elementsTodayLists.get(0));

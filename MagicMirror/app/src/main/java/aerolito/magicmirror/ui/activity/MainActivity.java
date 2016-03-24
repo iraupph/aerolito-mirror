@@ -1,6 +1,5 @@
 package aerolito.magicmirror.ui.activity;
 
-import android.animation.ValueAnimator;
 import android.content.ContentResolver;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -23,21 +22,20 @@ import android.widget.Toast;
 import com.orhanobut.hawk.Hawk;
 import com.orhanobut.hawk.HawkBuilder;
 import com.orhanobut.hawk.LogLevel;
-import com.romainpiel.shimmer.Shimmer;
 import com.romainpiel.shimmer.ShimmerTextView;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
 import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
 import aerolito.magicmirror.module.DateHelper;
+import aerolito.magicmirror.module.GreetingHelper;
 import aerolito.magicmirror.module.WeatherHelper;
-import aerolito.magicmirror.module.WikipediaParser;
+import aerolito.magicmirror.module.WikipediaHelper;
 import aerolito.magicmirror.util.L;
 
 public class MainActivity extends LocationActivity implements WeatherHelper.OnWeatherListener {
@@ -54,8 +52,6 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     private static final int OFF_BRIGHTNESS = 0;
     private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
-    private static final int VISITOR_DELAY = 1000;
-
     private Handler uiChangesHandler;
 
     private Handler wakeUpHandler;
@@ -67,7 +63,7 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     private DateHelper dateHelper = DateHelper.getInstance();
     private TextView date;
 
-    private WikipediaParser wikipediaHelper = WikipediaParser.getInstance();
+    private WikipediaHelper wikipediaHelper = WikipediaHelper.getInstance();
     private TextView infoTitle;
     private TextView infoContent;
     private List<Map.Entry<String, String>> news;
@@ -76,6 +72,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
 
     private WeatherHelper weatherHelper = WeatherHelper.getInstance();
     private LinearLayout forecastsParent;
+
+    private GreetingHelper greetingHelper = GreetingHelper.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +109,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
 
+        greetingHelper.setup(((LinearLayout) findViewById(R.id.visitors)), ((TextView) findViewById(R.id.compliment_title)), ((ShimmerTextView) findViewById(R.id.compliment_content)));
+
         HawkBuilder hawkBuilder = Hawk.init(this)
                 .setEncryptionMethod(HawkBuilder.EncryptionMethod.NO_ENCRYPTION)
                 .setStorage(HawkBuilder.newSharedPrefStorage(this));
@@ -126,12 +126,6 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         makeFullscreen();
         wakeUpNow();
         refreshScheduledSleep();
-
-        updateDate();
-
-        wikipediaHelper.execute(new OnWikipediaProcessedListener());
-
-        updateVisitors();
     }
 
     @Override
@@ -180,6 +174,9 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
                 if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
                 }
+                updateDate();
+                wikipediaHelper.execute(new OnWikipediaProcessedListener());
+                greetingHelper.updateGreeting();
             }
         }, WAKE_UP_DELAY);
     }
@@ -235,63 +232,7 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         }
     }
 
-    private String[] COMPLIMENTS = new String[]{
-            "RADIANTE", "SEXY", "ESPETACULAR", "SENSUAL", "UM ESTOURO", "ESTONTEANTE", "FENOMENAL",
-            "ELEGANTE", "SEM IGUAL", "FODA", "INCRÍVEL", "COM TUDO EM CIMA", "UM ARRASO", "COM TUDO",
-            "O MÁXIMO", "EXCELENTE", "AMÁVEL", "PEGÁVEL", "TRANSÁVEL"
-    };
-
-    private void updateVisitors() {
-        LinearLayout visitorsParent = (LinearLayout) findViewById(R.id.visitors);
-        for (int i = 0; i < ((LinearLayout) visitorsParent.getChildAt(1)).getChildCount(); i++) {
-            ((LinearLayout) visitorsParent.getChildAt(1)).getChildAt(i).setVisibility(View.INVISIBLE);
-        }
-        findViewById(R.id.compliment_title).setVisibility(View.INVISIBLE);
-        findViewById(R.id.compliment_content).setVisibility(View.INVISIBLE);
-        int visitors = Hawk.get("visitors", 0) + 1;
-        Hawk.put("visitors", visitors);
-        String visitorsStr = String.format(Locale.getDefault(), "%04d", visitors);
-        setDelayedVisitorDigit(visitorsStr.length() - 1, visitorsStr, visitorsParent);
-    }
-
-    private void setDelayedVisitorDigit(final int visitorPosition, final String visitorsStr, final LinearLayout visitorsParent) {
-        final TextView visitorDigit = (TextView) ((LinearLayout) visitorsParent.getChildAt(1)).getChildAt(visitorPosition);
-        visitorDigit.setVisibility(View.INVISIBLE);
-        visitorDigit.setText(String.valueOf(visitorsStr.charAt(visitorPosition)));
-        visitorDigit.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                visitorDigit.setVisibility(View.VISIBLE);
-                if (visitorPosition > 0) {
-                    setDelayedVisitorDigit(visitorPosition - 1, visitorsStr, visitorsParent);
-                } else {
-                    final TextView complimentTitle = (TextView) findViewById(R.id.compliment_title);
-                    final ShimmerTextView complimentContent = (ShimmerTextView) findViewById(R.id.compliment_content);
-                    complimentTitle.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            complimentTitle.setVisibility(View.VISIBLE);
-                            complimentContent.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    complimentContent.setVisibility(View.VISIBLE);
-                                    complimentContent.setText(COMPLIMENTS[new Random().nextInt(COMPLIMENTS.length)]);
-                                    Shimmer shimmer = new Shimmer();
-                                    shimmer.setRepeatCount(ValueAnimator.INFINITE)
-                                            .setDuration(1000)
-                                            .setStartDelay(500)
-                                            .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
-                                    shimmer.start(complimentContent);
-                                }
-                            }, VISITOR_DELAY);
-                        }
-                    }, VISITOR_DELAY);
-                }
-            }
-        }, VISITOR_DELAY);
-    }
-
-    private class OnWikipediaProcessedListener implements WikipediaParser.OnWikipediaProcessedListener {
+    private class OnWikipediaProcessedListener implements WikipediaHelper.OnWikipediaProcessedListener {
 
         private static final String RECENT_EVENT = "Eventos recentes";
         private static final String HISTORY = "O dia na história";
