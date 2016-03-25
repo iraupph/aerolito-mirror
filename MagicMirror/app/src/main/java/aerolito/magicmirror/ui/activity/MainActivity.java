@@ -37,8 +37,10 @@ import aerolito.magicmirror.module.GreetingHelper;
 import aerolito.magicmirror.module.WeatherHelper;
 import aerolito.magicmirror.module.WikipediaHelper;
 import aerolito.magicmirror.util.L;
+import butterknife.Bind;
+import butterknife.ButterKnife;
 
-public class MainActivity extends LocationActivity implements WeatherHelper.OnWeatherListener {
+public class MainActivity extends LocationActivity implements WeatherHelper.OnWeatherListener, DateHelper.OnModuleResult {
 
     private static final String TAG = MainActivity.class.getName();
 
@@ -52,26 +54,30 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     private static final int OFF_BRIGHTNESS = 0;
     private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
+    @Bind(R.id.location) TextView locationView;
+    @Bind(R.id.date) TextView dateView;
+    @Bind(R.id.forecasts) LinearLayout forecastsView;
+    @Bind(R.id.compliment_title) TextView complimentTitleView;
+    @Bind(R.id.compliment_content) ShimmerTextView complimentContentView;
+    @Bind(R.id.info_title) TextView infoTitleView;
+    @Bind(R.id.info_content) TextView infoContentView;
+    // View que fica por cima do nosso conteúdo quando desliga o espelho
+    @Bind(R.id.overlay) View overlayView;
+    @Bind(R.id.visitors) LinearLayout visitorsView;
+
     private Handler uiChangesHandler;
 
     private Handler wakeUpHandler;
     private Handler sleepHandler;
 
-    private View overlay;
-    private TextView location;
-
     private DateHelper dateHelper = DateHelper.getInstance();
-    private TextView date;
 
     private WikipediaHelper wikipediaHelper = WikipediaHelper.getInstance();
-    private TextView infoTitle;
-    private TextView infoContent;
     private List<Map.Entry<String, String>> news;
     private Animation scrollHorizontallyAnimation;
     private AsyncTask<Void, Map.Entry<String, String>, Void> eventsTask;
 
     private WeatherHelper weatherHelper = WeatherHelper.getInstance();
-    private LinearLayout forecastsParent;
 
     private GreetingHelper greetingHelper = GreetingHelper.getInstance();
 
@@ -79,19 +85,9 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ButterKnife.bind(this);
 
         log = L.getInstance(getApplicationContext());
-
-        // View que fica por cima do nosso conteúdo
-        overlay = findViewById(R.id.overlay);
-
-        infoTitle = (TextView) findViewById(R.id.info_title);
-        infoContent = (TextView) findViewById(R.id.info_content);
-
-        location = (TextView) findViewById(R.id.location);
-        date = (TextView) findViewById(R.id.date);
-
-        forecastsParent = (LinearLayout) findViewById(R.id.forecasts);
 
         // Listener pra caso alguém toque na tela esconder as barras do sistema que vão aparecer
         getWindow().getDecorView().setOnSystemUiVisibilityChangeListener
@@ -109,7 +105,7 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
 
-        greetingHelper.setup(((LinearLayout) findViewById(R.id.visitors)), ((TextView) findViewById(R.id.compliment_title)), ((ShimmerTextView) findViewById(R.id.compliment_content)));
+        greetingHelper.setup(visitorsView, complimentTitleView, complimentContentView);
 
         HawkBuilder hawkBuilder = Hawk.init(this)
                 .setEncryptionMethod(HawkBuilder.EncryptionMethod.NO_ENCRYPTION)
@@ -118,6 +114,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
             hawkBuilder = hawkBuilder.setLogLevel(LogLevel.FULL);
         }
         hawkBuilder.build();
+
+        dateHelper.init();
     }
 
     @Override
@@ -126,6 +124,9 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         makeFullscreen();
         wakeUpNow();
         refreshScheduledSleep();
+        dateHelper.run(this);
+        wikipediaHelper.execute(new OnWikipediaProcessedListener());
+        greetingHelper.updateGreeting();
     }
 
     @Override
@@ -156,7 +157,7 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
                 }
                 ContentResolver cResolver = getApplicationContext().getContentResolver();
                 Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, OFF_BRIGHTNESS);
-                overlay.setVisibility(View.VISIBLE);
+                overlayView.setVisibility(View.VISIBLE);
             }
         }, SLEEP_DELAY);
     }
@@ -170,13 +171,10 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
             public void run() {
                 ContentResolver cResolver = getApplicationContext().getContentResolver();
                 Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
-                overlay.setVisibility(View.INVISIBLE);
+                overlayView.setVisibility(View.INVISIBLE);
                 if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
                 }
-                updateDate();
-                wikipediaHelper.execute(new OnWikipediaProcessedListener());
-                greetingHelper.updateGreeting();
             }
         }, WAKE_UP_DELAY);
     }
@@ -204,21 +202,16 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         }
     }
 
-    private void updateDate() {
-        String date = dateHelper.getDate();
-        toggleTextView(this.date, date != null ? View.VISIBLE : View.INVISIBLE, date);
-    }
-
     @Override
     public void onHasBestLocation(String city, String country) {
-        toggleTextView(this.location, city != null ? View.VISIBLE : View.INVISIBLE, city);
+        toggleTextView(this.locationView, city != null ? View.VISIBLE : View.INVISIBLE, city);
         weatherHelper.requestForecast(city, country, this);
     }
 
     @Override
     public void onWeatherResponse(List<Pair<String, Pair<String, Integer>>> response) {
-        for (int i = 0; i < forecastsParent.getChildCount(); i++) {
-            ViewGroup forecastView = (ViewGroup) forecastsParent.getChildAt(i);
+        for (int i = 0; i < forecastsView.getChildCount(); i++) {
+            ViewGroup forecastView = (ViewGroup) forecastsView.getChildAt(i);
             TextView dateView = (TextView) forecastView.getChildAt(0);
             ImageView iconView = (ImageView) forecastView.getChildAt(1);
             TextView temperatureView = (TextView) forecastView.getChildAt(2);
@@ -230,6 +223,12 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
 
             forecastView.setVisibility(View.VISIBLE);
         }
+    }
+
+    @Override
+    public void onModuleResult(Object result) {
+        String resultStr = (String) result;
+        toggleTextView(this.dateView, resultStr != null ? View.VISIBLE : View.INVISIBLE, resultStr);
     }
 
     private class OnWikipediaProcessedListener implements WikipediaHelper.OnWikipediaProcessedListener {
@@ -315,37 +314,38 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
             super.onProgressUpdate(values);
             for (Map.Entry<String, String> nextNews : values) {
                 log.i(TAG, String.format("updateInfo %s - %s", nextNews.getKey(), nextNews.getValue()));
-                toggleTextView(infoTitle, View.VISIBLE, nextNews.getKey());
-                toggleTextView(infoContent, View.INVISIBLE, nextNews.getValue());
-                infoContent.post(new Runnable() {
+                toggleTextView(infoTitleView, View.VISIBLE, nextNews.getKey());
+                toggleTextView(infoContentView, View.INVISIBLE, nextNews.getValue() + "\n");
+                infoContentView.post(new Runnable() {
                     @Override
                     public void run() {
                         // Scroll de fora da tela até um pouco mais por trás do título
-                        int fullScreenWidth = overlay.getMeasuredWidth();
-                        scrollHorizontallyAnimation = new TranslateAnimation(fullScreenWidth, (float) (-fullScreenWidth * 0.5), 0, 0);
+                        int fullScreenWidth = overlayView.getMeasuredWidth();
+                        int contentExtraWidth = fullScreenWidth - infoContentView.getMeasuredWidth();
+                        scrollHorizontallyAnimation = new TranslateAnimation(fullScreenWidth, (float) (-fullScreenWidth + contentExtraWidth), 0, 0);
                         scrollHorizontallyAnimation.setInterpolator(new LinearInterpolator());
-                        scrollHorizontallyAnimation.setDuration((long) (infoContent.getText().toString().length() * 0.8 * 1000));
+                        scrollHorizontallyAnimation.setDuration(infoContentView.getText().toString().length() * 1000L);
                         scrollHorizontallyAnimation.setAnimationListener(new Animation.AnimationListener() {
                             @Override
                             public void onAnimationStart(Animation animation) {
                                 /* Deixa INVISIBLE quando seta o texto pra não dar o flicker da posição original
                                 e quando deslocamos pra fora antes de começar a animação, daí aqui já pode mostrar
                                 pq ele já tá fora da tela ;-) */
-                                toggleTextView(infoContent, View.VISIBLE, null);
+                                toggleTextView(infoContentView, View.VISIBLE, null);
                             }
 
                             @Override
                             public void onAnimationEnd(Animation animation) {
                                 isDisplayingEvent = false;
                                 // Isso tira mais um flicker que não sei pq acontece :>
-                                toggleTextView(infoContent, View.INVISIBLE, null);
+                                toggleTextView(infoContentView, View.INVISIBLE, null);
                             }
 
                             @Override
                             public void onAnimationRepeat(Animation animation) {
                             }
                         });
-                        infoContent.setAnimation(scrollHorizontallyAnimation);
+                        infoContentView.setAnimation(scrollHorizontallyAnimation);
                     }
                 });
             }

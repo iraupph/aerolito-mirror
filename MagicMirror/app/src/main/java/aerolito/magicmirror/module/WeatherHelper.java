@@ -171,7 +171,9 @@ public class WeatherHelper {
                     Calendar forecastCalendar = Calendar.getInstance();
                     forecastCalendar.setTime(forecast.dateTime);
                     float averageTemperature = (forecast.temperature.minTemp + forecast.temperature.maxTemp) / 2;
-                    forecastSummary.add(new Pair<>(dateHelper.getForecastDate(forecastCalendar),
+                    // TODO: Menos hackish
+                    String processedResult = (String) dateHelper.getProcessedResult(forecastCalendar);
+                    forecastSummary.add(new Pair<>(processedResult,
                             // Locale.US pra botar o separador como um ponto
                             new Pair<>(String.format(Locale.US, "%.1f  °C", averageTemperature), forecastsMapping.get(forecast.weather.get(0).weather))));
                 }

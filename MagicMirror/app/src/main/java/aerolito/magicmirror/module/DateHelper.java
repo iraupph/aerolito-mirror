@@ -5,7 +5,9 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
-public class DateHelper {
+import aerolito.magicmirror.module.base.Module;
+
+public class DateHelper extends Module {
 
     private static final String[] WEEKDAYS = new String[]{"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
     private static final String[] SHORT_WEEKDAYS = new String[]{"", "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"};
@@ -18,8 +20,13 @@ public class DateHelper {
     public static DateHelper getInstance() {
         return instance;
     }
-    
-    public DateHelper() {
+
+    private DateHelper() {
+    }
+
+    @Override
+    public void init(Object... args) {
+        super.init(args);
         DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(Locale.getDefault());
         dateFormatSymbols.setWeekdays(WEEKDAYS);
         dateFormatSymbols.setShortWeekdays(SHORT_WEEKDAYS);
@@ -29,11 +36,19 @@ public class DateHelper {
         this.forecastDateFormat.setDateFormatSymbols(dateFormatSymbols);
     }
 
-    public String getDate() {
-        return defaultDateFormat.format(Calendar.getInstance().getTime());
+    protected String getModuleIdentifier() {
+        return DateHelper.class.getName();
     }
 
-    public String getForecastDate(Calendar calendar) {
-        return forecastDateFormat.format(calendar.getTime());
+    protected Object getProcessedResult(Object... args) {
+        Calendar calendar = null;
+        if (args.length > 0) {
+            calendar = (Calendar) args[0];
+        }
+        if (calendar != null) {
+            return forecastDateFormat.format(calendar.getTime());
+        } else {
+            return defaultDateFormat.format(Calendar.getInstance().getTime());
+        }
     }
 }

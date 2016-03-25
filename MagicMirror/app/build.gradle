@@ -45,4 +45,6 @@ dependencies {
     compile 'com.github.orhanobut:hawk:1.21'
 
     compile 'com.romainpiel.shimmer:library:1.4.0@aar'
+
+    compile 'com.jakewharton:butterknife:7.0.1'
 }
