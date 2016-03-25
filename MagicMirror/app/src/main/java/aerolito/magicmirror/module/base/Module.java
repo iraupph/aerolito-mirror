@@ -2,14 +2,20 @@ package aerolito.magicmirror.module.base;
 
 import android.os.AsyncTask;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.orhanobut.hawk.Hawk;
 
 public abstract class Module {
 
     private boolean initialized;
+    private Gson gson;
 
     public void init(Object... args) {
         this.initialized = true;
+        if (getStorageTypeToken() != null) {
+            this.gson = new Gson();
+        }
     }
 
     public final void run(final OnModuleResult listener, final Object... args) {
@@ -22,8 +28,16 @@ public abstract class Module {
 
     protected abstract String getModuleIdentifier();
 
+    protected TypeToken getStorageTypeToken() {
+        return null;
+    }
+
     private Object getStorageResult() {
-        return Hawk.get(getModuleIdentifier(), null);
+        Object stored = Hawk.get(getModuleIdentifier(), null);
+        if (gson != null && stored != null) {
+            stored = gson.fromJson(gson.toJsonTree(stored), getStorageTypeToken().getType());
+        }
+        return stored;
     }
 
     private Object putStorageResult(Object result) {

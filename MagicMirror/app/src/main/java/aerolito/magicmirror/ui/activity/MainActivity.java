@@ -36,14 +36,14 @@ import aerolito.magicmirror.R;
 import aerolito.magicmirror.module.DateModule;
 import aerolito.magicmirror.module.GreetingHelper;
 import aerolito.magicmirror.module.LocationModule;
-import aerolito.magicmirror.module.WeatherHelper;
+import aerolito.magicmirror.module.WeatherModule;
 import aerolito.magicmirror.module.WikipediaHelper;
 import aerolito.magicmirror.module.base.Module;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity implements WeatherHelper.OnWeatherListener {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getName();
 
@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements WeatherHelper.OnW
     private Animation scrollHorizontallyAnimation;
     private AsyncTask<Void, Map.Entry<String, String>, Void> eventsTask;
 
-    private WeatherHelper weatherHelper = WeatherHelper.getInstance();
+    private WeatherModule weatherModule = WeatherModule.getInstance();
 
     private GreetingHelper greetingHelper = GreetingHelper.getInstance();
 
@@ -121,6 +121,7 @@ public class MainActivity extends AppCompatActivity implements WeatherHelper.OnW
 
         dateModule.init();
         locationModule.init(getApplicationContext());
+        weatherModule.init();
     }
 
     @Override
@@ -136,19 +137,50 @@ public class MainActivity extends AppCompatActivity implements WeatherHelper.OnW
                 toggleTextView(dateView, resultStr != null ? View.VISIBLE : View.INVISIBLE, resultStr);
             }
         });
-        locationModule.run(new Module.OnModuleResult() {
-            @Override
-            public void onModuleResult(Object result) {
-                Pair<String, String> cityAndCountry = (Pair<String, String>) result;
-                String city = null;
-                if (cityAndCountry != null) {
-                    city = cityAndCountry.first;
-                    weatherHelper.requestForecast(city, cityAndCountry.second, MainActivity.this);
+        locationModule.run(
+                new Module.OnModuleResult() {
+                    @Override
+                    public void onModuleResult(Object result) {
+                        Pair<String, String> cityAndCountry = (Pair<String, String>) result;
+                        String city = null;
+                        if (cityAndCountry != null) {
+                            city = cityAndCountry.first;
+                            weatherModule.run(new Module.OnModuleResult() {
+                                @Override
+                                public void onModuleResult(Object result) {
+                                    List<Pair<String, Pair<String, Integer>>> forecasts = (List<Pair<String, Pair<String, Integer>>>) result;
+                                    if (forecasts != null) {
+                                        forecastsView.setVisibility(View.VISIBLE);
+                                        for (int i = 0; i < forecastsView.getChildCount(); i++) {
+                                            ViewGroup forecastView = (ViewGroup) forecastsView.getChildAt(i);
+                                            TextView dateView = (TextView) forecastView.getChildAt(0);
+                                            ImageView iconView = (ImageView) forecastView.getChildAt(1);
+                                            TextView temperatureView = (TextView) forecastView.getChildAt(2);
+
+                                            Pair<String, Pair<String, Integer>> forecastData = forecasts.get(i);
+                                            dateView.setText(forecastData.first);
+                                            iconView.setImageResource(forecastData.second.second);
+                                            temperatureView.setText(forecastData.second.first);
+
+                                            forecastView.setVisibility(View.VISIBLE);
+                                        }
+                                    } else {
+                                        forecastsView.setVisibility(View.INVISIBLE);
+                                    }
+                                }
+                            }, city, cityAndCountry.second);
+                        }
+
+                        toggleTextView(locationView, city != null ? View.VISIBLE : View.INVISIBLE, city);
+                    }
                 }
-                toggleTextView(locationView, city != null ? View.VISIBLE : View.INVISIBLE, city);
-            }
-        });
-        wikipediaHelper.execute(new OnWikipediaProcessedListener());
+
+        );
+        wikipediaHelper.execute(new
+
+                OnWikipediaProcessedListener()
+
+        );
         greetingHelper.updateGreeting();
     }
 
@@ -222,23 +254,6 @@ public class MainActivity extends AppCompatActivity implements WeatherHelper.OnW
         view.setVisibility(visibility);
         if (text != null) {
             view.setText(text);
-        }
-    }
-
-    @Override
-    public void onWeatherResponse(List<Pair<String, Pair<String, Integer>>> response) {
-        for (int i = 0; i < forecastsView.getChildCount(); i++) {
-            ViewGroup forecastView = (ViewGroup) forecastsView.getChildAt(i);
-            TextView dateView = (TextView) forecastView.getChildAt(0);
-            ImageView iconView = (ImageView) forecastView.getChildAt(1);
-            TextView temperatureView = (TextView) forecastView.getChildAt(2);
-
-            Pair<String, Pair<String, Integer>> forecastData = response.get(i);
-            dateView.setText(forecastData.first);
-            iconView.setImageResource(forecastData.second.second);
-            temperatureView.setText(forecastData.second.first);
-
-            forecastView.setVisibility(View.VISIBLE);
         }
     }
 
