@@ -71,7 +71,7 @@ public class WeatherHelper {
 
     private HashMap<String, Integer> forecastsMapping;
     private HashMap<String, String> isoCountryMapping;
-    private DateHelper dateHelper = DateHelper.getInstance();
+    private DateModule dateModule = DateModule.getInstance();
 
     private String formatLocation(String city, String country) {
         return String.format("%s,%s", city, isoCountryMapping.get(country));
@@ -172,7 +172,7 @@ public class WeatherHelper {
                     forecastCalendar.setTime(forecast.dateTime);
                     float averageTemperature = (forecast.temperature.minTemp + forecast.temperature.maxTemp) / 2;
                     // TODO: Menos hackish
-                    String processedResult = (String) dateHelper.getProcessedResult(forecastCalendar);
+                    String processedResult = (String) dateModule.getProcessedResult(forecastCalendar);
                     forecastSummary.add(new Pair<>(processedResult,
                             // Locale.US pra botar o separador como um ponto
                             new Pair<>(String.format(Locale.US, "%.1f  °C", averageTemperature), forecastsMapping.get(forecast.weather.get(0).weather))));

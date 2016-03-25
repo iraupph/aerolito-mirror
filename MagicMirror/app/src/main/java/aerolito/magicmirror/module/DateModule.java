@@ -7,7 +7,7 @@ import java.util.Locale;
 
 import aerolito.magicmirror.module.base.Module;
 
-public class DateHelper extends Module {
+public class DateModule extends Module {
 
     private static final String[] WEEKDAYS = new String[]{"", "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"};
     private static final String[] SHORT_WEEKDAYS = new String[]{"", "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"};
@@ -15,13 +15,13 @@ public class DateHelper extends Module {
     private SimpleDateFormat defaultDateFormat;
     private SimpleDateFormat forecastDateFormat;
 
-    private static DateHelper instance = new DateHelper();
+    private static DateModule instance = new DateModule();
 
-    public static DateHelper getInstance() {
+    public static DateModule getInstance() {
         return instance;
     }
 
-    private DateHelper() {
+    private DateModule() {
     }
 
     @Override
@@ -37,7 +37,7 @@ public class DateHelper extends Module {
     }
 
     protected String getModuleIdentifier() {
-        return DateHelper.class.getName();
+        return DateModule.class.getName();
     }
 
     protected Object getProcessedResult(Object... args) {

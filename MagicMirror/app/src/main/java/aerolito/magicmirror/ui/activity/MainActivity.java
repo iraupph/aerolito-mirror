@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.View;
@@ -32,15 +33,17 @@ import java.util.Random;
 
 import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
-import aerolito.magicmirror.module.DateHelper;
+import aerolito.magicmirror.module.DateModule;
 import aerolito.magicmirror.module.GreetingHelper;
+import aerolito.magicmirror.module.LocationModule;
 import aerolito.magicmirror.module.WeatherHelper;
 import aerolito.magicmirror.module.WikipediaHelper;
+import aerolito.magicmirror.module.base.Module;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
 import butterknife.ButterKnife;
 
-public class MainActivity extends LocationActivity implements WeatherHelper.OnWeatherListener, DateHelper.OnModuleResult {
+public class MainActivity extends AppCompatActivity implements WeatherHelper.OnWeatherListener {
 
     private static final String TAG = MainActivity.class.getName();
 
@@ -70,7 +73,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     private Handler wakeUpHandler;
     private Handler sleepHandler;
 
-    private DateHelper dateHelper = DateHelper.getInstance();
+    private DateModule dateModule = DateModule.getInstance();
+    private LocationModule locationModule = LocationModule.getInstance();
 
     private WikipediaHelper wikipediaHelper = WikipediaHelper.getInstance();
     private List<Map.Entry<String, String>> news;
@@ -115,7 +119,8 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         }
         hawkBuilder.build();
 
-        dateHelper.init();
+        dateModule.init();
+        locationModule.init(getApplicationContext());
     }
 
     @Override
@@ -124,7 +129,25 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
         makeFullscreen();
         wakeUpNow();
         refreshScheduledSleep();
-        dateHelper.run(this);
+        dateModule.run(new Module.OnModuleResult() {
+            @Override
+            public void onModuleResult(Object result) {
+                String resultStr = (String) result;
+                toggleTextView(dateView, resultStr != null ? View.VISIBLE : View.INVISIBLE, resultStr);
+            }
+        });
+        locationModule.run(new Module.OnModuleResult() {
+            @Override
+            public void onModuleResult(Object result) {
+                Pair<String, String> cityAndCountry = (Pair<String, String>) result;
+                String city = null;
+                if (cityAndCountry != null) {
+                    city = cityAndCountry.first;
+                    weatherHelper.requestForecast(city, cityAndCountry.second, MainActivity.this);
+                }
+                toggleTextView(locationView, city != null ? View.VISIBLE : View.INVISIBLE, city);
+            }
+        });
         wikipediaHelper.execute(new OnWikipediaProcessedListener());
         greetingHelper.updateGreeting();
     }
@@ -203,12 +226,6 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
     }
 
     @Override
-    public void onHasBestLocation(String city, String country) {
-        toggleTextView(this.locationView, city != null ? View.VISIBLE : View.INVISIBLE, city);
-        weatherHelper.requestForecast(city, country, this);
-    }
-
-    @Override
     public void onWeatherResponse(List<Pair<String, Pair<String, Integer>>> response) {
         for (int i = 0; i < forecastsView.getChildCount(); i++) {
             ViewGroup forecastView = (ViewGroup) forecastsView.getChildAt(i);
@@ -223,12 +240,6 @@ public class MainActivity extends LocationActivity implements WeatherHelper.OnWe
 
             forecastView.setVisibility(View.VISIBLE);
         }
-    }
-
-    @Override
-    public void onModuleResult(Object result) {
-        String resultStr = (String) result;
-        toggleTextView(this.dateView, resultStr != null ? View.VISIBLE : View.INVISIBLE, resultStr);
     }
 
     private class OnWikipediaProcessedListener implements WikipediaHelper.OnWikipediaProcessedListener {
