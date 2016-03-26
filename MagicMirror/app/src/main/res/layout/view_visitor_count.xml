@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<TextView
+<aerolito.magicmirror.ui.view.RepeatableCountAnimationTextView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:text="0"
+    android:maxLength="1"
     android:textSize="@dimen/material_text_display3"
     android:visibility="invisible"
     tools:showIn="@layout/activity_main"
+    tools:text="0"
     tools:visibility="visible"/>

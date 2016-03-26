@@ -47,4 +47,6 @@ dependencies {
     compile 'com.romainpiel.shimmer:library:1.4.0@aar'
 
     compile 'com.jakewharton:butterknife:7.0.1'
+
+    compile 'com.daasuu:CountAnimationTextView:0.1.1'
 }

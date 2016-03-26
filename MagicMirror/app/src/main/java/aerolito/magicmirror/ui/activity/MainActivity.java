@@ -36,6 +36,7 @@ import aerolito.magicmirror.module.LocationModule;
 import aerolito.magicmirror.module.WeatherModule;
 import aerolito.magicmirror.module.WikipediaModule;
 import aerolito.magicmirror.module.base.Module;
+import aerolito.magicmirror.ui.view.RepeatableCountAnimationTextView;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -83,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
     private Animation scrollHorizontallyAnimation;
     private EventsTask eventsTask;
     private Shimmer shimmer;
+    private final Object digitsLock = new Object();
+    private Random visitorsRandom = new Random();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -206,17 +209,110 @@ public class MainActivity extends AppCompatActivity {
                 }, GREETING_REVEAL_DELAY);
             }
 
+            private void startCountdown(final RepeatableCountAnimationTextView textView, final int repeats, final char finalValue, final boolean isLastDigit) {
+                textView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Números altos pra dar mais "giro" no contador
+                        int startValue = visitorsRandom.nextInt(3);
+                        int endValue = visitorsRandom.nextInt(5) + 4;
+                        final RepeatableCountAnimationTextView repeatableCountAnimationTextView =
+                                textView
+                                        .setInterpolator(new LinearInterpolator())
+                                        .setAnimationDuration(500)
+                                        .setRepeatCount(repeats)
+                                        .setCountValues(startValue, endValue);
+                        repeatableCountAnimationTextView
+                                .setCountAnimationListener(new RepeatableCountAnimationTextView.CountAnimationListener() {
+                                    @Override
+                                    public void onAnimationStart(Object animatedValue) {
+                                    }
+
+                                    @Override
+                                    public void onAnimationEnd(Object animatedValue) {
+                                        if (isLastDigit) {
+                                            synchronized (digitsLock) {
+                                                digitsLock.notify();
+                                            }
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onAnimationRepeat(Object animatedValue, int repeatCount) {
+                                        // Começa do final anterior pra não dar flicker na troca de número
+                                        // e o final é dependente dele também (decrementa ou incrementa)
+                                        // Ou vai até o valor final se é última repetição
+                                        int toValue;
+                                        int prevEndValue = (int) animatedValue;
+                                        Integer finalValueInt = Integer.valueOf(String.valueOf(finalValue));
+                                        if (repeatCount != finalValue) {
+                                            if (prevEndValue > 3) {
+                                                toValue = visitorsRandom.nextInt(3);
+                                            } else {
+                                                toValue = visitorsRandom.nextInt(5) + 4;
+                                            }
+                                        } else {
+                                            toValue = finalValueInt;
+                                        }
+                                        repeatableCountAnimationTextView.setCountValues(prevEndValue, toValue);
+                                    }
+                                });
+                        repeatableCountAnimationTextView
+                                .startCountAnimation();
+                    }
+                });
+            }
+
             @Override
             public void onModuleResult(Object result) {
-                Pair<String, String> visitorsAndCompliment = (Pair<String, String>) result;
+                final Pair<String, String> visitorsAndCompliment = (Pair<String, String>) result;
                 if (visitorsAndCompliment != null) {
                     for (int i = 0; i < visitorsView.getChildCount(); i++) {
                         visitorsView.getChildAt(i).setVisibility(View.INVISIBLE);
                     }
                     complimentTitleView.setVisibility(View.INVISIBLE);
                     complimentContentView.setVisibility(View.INVISIBLE);
-                    String visitorsStr = visitorsAndCompliment.first;
-                    setDelayedVisitorDigit(visitorsStr.length() - 1, visitorsStr, visitorsAndCompliment.second);
+                    final String visitorsStr = visitorsAndCompliment.first;
+                    visitorsView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            for (int i = 0; i < visitorsView.getChildCount(); i++) {
+                                visitorsView.getChildAt(i).setVisibility(View.VISIBLE);
+                                int repeats = visitorsView.getChildCount() + i;
+                                startCountdown((RepeatableCountAnimationTextView) visitorsView.getChildAt(i), repeats, visitorsStr.charAt(i), i == visitorsView.getChildCount() - 1);
+                            }
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    synchronized (digitsLock) {
+                                        try {
+                                            digitsLock.wait();
+                                        } catch (InterruptedException e) {
+                                        }
+                                    }
+                                    complimentTitleView.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            complimentTitleView.setVisibility(View.VISIBLE);
+                                            complimentContentView.postDelayed(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    complimentContentView.setText(visitorsAndCompliment.second);
+                                                    complimentContentView.post(new Runnable() {
+                                                        @Override
+                                                        public void run() {
+                                                            complimentContentView.setVisibility(View.VISIBLE);
+                                                            shimmer.start(complimentContentView);
+                                                        }
+                                                    });
+                                                }
+                                            }, GREETING_REVEAL_DELAY);
+                                        }
+                                    }, GREETING_REVEAL_DELAY);
+                                }
+                            }).start();
+                        }
+                    }, GREETING_REVEAL_DELAY);
                 }
             }
         }, true);
