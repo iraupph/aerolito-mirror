@@ -42,8 +42,6 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = MainActivity.class.getName();
-
     public L log;
 
     private static final int HIDE_UI_DELAY = 1000;
@@ -53,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int OFF_BRIGHTNESS = 0;
     private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
+
+    private static final int MAX_FORECASTS = 3;
 
     private static final int GREETING_REVEAL_DELAY = 1000;
     private static final int SHIMMER_DURATION = 1500;
@@ -148,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
                                     List<Pair<String, Pair<String, Integer>>> forecasts = (List<Pair<String, Pair<String, Integer>>>) result;
                                     if (forecasts != null) {
                                         forecastsView.setVisibility(View.VISIBLE);
-                                        for (int i = 0; i < forecastsView.getChildCount(); i++) {
+                                        for (int i = 0; i < forecasts.size() && i < MAX_FORECASTS; i++) {
                                             ViewGroup forecastView = (ViewGroup) forecastsView.getChildAt(i);
                                             TextView dateView = (TextView) forecastView.getChildAt(0);
                                             ImageView iconView = (ImageView) forecastView.getChildAt(1);
