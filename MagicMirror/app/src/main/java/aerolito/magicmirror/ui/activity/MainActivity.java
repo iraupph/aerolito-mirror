@@ -27,8 +27,6 @@ import com.orhanobut.hawk.LogLevel;
 import com.romainpiel.shimmer.Shimmer;
 import com.romainpiel.shimmer.ShimmerTextView;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -39,7 +37,7 @@ import aerolito.magicmirror.module.DateModule;
 import aerolito.magicmirror.module.GreetingModule;
 import aerolito.magicmirror.module.LocationModule;
 import aerolito.magicmirror.module.WeatherModule;
-import aerolito.magicmirror.module.WikipediaHelper;
+import aerolito.magicmirror.module.WikipediaModule;
 import aerolito.magicmirror.module.base.Module;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
@@ -83,12 +81,10 @@ public class MainActivity extends AppCompatActivity {
     private LocationModule locationModule = LocationModule.getInstance();
     private WeatherModule weatherModule = WeatherModule.getInstance();
     private GreetingModule greetingModule = GreetingModule.getInstance();
+    private WikipediaModule wikipediaModule = WikipediaModule.getInstance();
 
-    private WikipediaHelper wikipediaHelper = WikipediaHelper.getInstance();
-    private List<Map.Entry<String, String>> news;
     private Animation scrollHorizontallyAnimation;
-    private AsyncTask<Void, Map.Entry<String, String>, Void> eventsTask;
-
+    private EventsTask eventsTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         locationModule.init(getApplicationContext());
         weatherModule.init();
         greetingModule.init();
+        wikipediaModule.init();
     }
 
     @Override
@@ -180,11 +177,6 @@ public class MainActivity extends AppCompatActivity {
                 }
 
         );
-        wikipediaHelper.execute(new
-
-                OnWikipediaProcessedListener()
-
-        );
         greetingModule.run(new Module.OnModuleResult() {
             private void setDelayedVisitorDigit(final int visitorPosition, final String visitorsStr, final String compliment) {
                 final TextView visitorDigit = (TextView) visitorsView.getChildAt(visitorPosition);
@@ -234,6 +226,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        wikipediaModule.run(new Module.OnModuleResult() {
+            @Override
+            public void onModuleResult(Object result) {
+                List<Map.Entry<String, String>> events = (List<Map.Entry<String, String>>) result;
+                if (events != null) {
+                    if (eventsTask == null || !eventsTask.isRunning()) {
+                        eventsTask = new EventsTask(events);
+                        eventsTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                        eventsTask.setEvents(events);
+                    }
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (eventsTask != null) {
+            eventsTask.setRunning(false);
+        }
     }
 
     @Override
@@ -309,78 +322,49 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class OnWikipediaProcessedListener implements WikipediaHelper.OnWikipediaProcessedListener {
-
-        private static final String RECENT_EVENT = "Eventos recentes";
-        private static final String HISTORY = "O dia na história";
-        private static final String BORN = "Nasceu neste dia";
-        private static final String DIED = "Faleceu neste dia";
-
-        private List<Map.Entry<String, String>> temporaryNews;
-
-        private OnWikipediaProcessedListener() {
-            this.temporaryNews = new ArrayList<>();
-        }
-
-        @Override
-        public void onLatestEventsProcessed(List<String> latestEvents) {
-            log.i(TAG, "onLatestEventsProcessed");
-            for (String event : latestEvents) {
-                temporaryNews.add(new AbstractMap.SimpleEntry<>(RECENT_EVENT, event));
-            }
-        }
-
-        @Override
-        public void onTodayHistoryEventsProcessed(List<String> history, List<String> born, List<String> deaths) {
-            log.i(TAG, "onTodayHistoryEventsProcessed");
-            for (String h : history) {
-                temporaryNews.add(new AbstractMap.SimpleEntry<>(HISTORY, h));
-            }
-            for (String b : born) {
-                temporaryNews.add(new AbstractMap.SimpleEntry<>(BORN, b));
-            }
-            for (String d : deaths) {
-                temporaryNews.add(new AbstractMap.SimpleEntry<>(DIED, d));
-            }
-            // Preenchemos separadamente as notícias nesse cara temporários depois substituimos o principal da classe
-            // Essa função é chamada sequencialmente por último então é de boa substituir aqui
-            if (temporaryNews.size() > 0) {
-                news = temporaryNews;
-            }
-            if (eventsTask == null) {
-                eventsTask = new EventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            }
-        }
-    }
-
     private class EventsTask extends AsyncTask<Void, Map.Entry<String, String>, Void> {
 
         private boolean isRunning;
-        private boolean isDisplayingEvent;
 
-        private EventsTask() {
+        private List<Map.Entry<String, String>> events;
+        private final Object displayingEventSemaphore = new Object();
+
+        private EventsTask(List<Map.Entry<String, String>> events) {
+            this.events = events;
             this.isRunning = true;
-            this.isDisplayingEvent = false;
+        }
+
+        public boolean isRunning() {
+            return isRunning;
+        }
+
+        public void setRunning(boolean running) {
+            isRunning = running;
+        }
+
+        public List<Map.Entry<String, String>> getEvents() {
+            return events;
+        }
+
+        public void setEvents(List<Map.Entry<String, String>> events) {
+            this.events = events;
         }
 
         @Override
         protected Void doInBackground(Void... voids) {
-            log.i(TAG, "Started events display", true);
             while (isRunning) {
-                int newPosition = new Random().nextInt(news.size());
-                for (int i = 0; i < news.size(); i++) {
-                    Map.Entry<String, String> entry = news.get(i);
-                    if (i == newPosition && !isDisplayingEvent) {
-                        isDisplayingEvent = true;
+                int newPosition = new Random().nextInt(events.size());
+                for (int i = 0; i < events.size(); i++) {
+                    Map.Entry<String, String> entry = events.get(i);
+                    if (i == newPosition) {
                         publishProgress(entry);
                         break;
                     }
                 }
-                while (isDisplayingEvent) {
+                synchronized (displayingEventSemaphore) {
                     try {
-                        Thread.sleep(1000);
+                        displayingEventSemaphore.wait();
                     } catch (InterruptedException e) {
-                        log.e(TAG, "EventsTask#doInBackground: " + e.getMessage(), true);
                     }
                 }
             }
@@ -391,7 +375,6 @@ public class MainActivity extends AppCompatActivity {
         protected void onProgressUpdate(Map.Entry<String, String>... values) {
             super.onProgressUpdate(values);
             for (Map.Entry<String, String> nextNews : values) {
-                log.i(TAG, String.format("updateInfo %s - %s", nextNews.getKey(), nextNews.getValue()));
                 toggleTextView(infoTitleView, View.VISIBLE, nextNews.getKey());
                 toggleTextView(infoContentView, View.INVISIBLE, nextNews.getValue() + "\n");
                 infoContentView.post(new Runnable() {
@@ -414,9 +397,11 @@ public class MainActivity extends AppCompatActivity {
 
                             @Override
                             public void onAnimationEnd(Animation animation) {
-                                isDisplayingEvent = false;
                                 // Isso tira mais um flicker que não sei pq acontece :>
                                 toggleTextView(infoContentView, View.INVISIBLE, null);
+                                synchronized (displayingEventSemaphore) {
+                                    displayingEventSemaphore.notify();
+                                }
                             }
 
                             @Override

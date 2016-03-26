@@ -32,7 +32,7 @@ public class GreetingModule extends Module {
 
     @Override
     protected Object getProcessedResult(Object... args) {
-        int visitorsCount = Hawk.get(getModuleIdentifier(), 0) + 1;
-        return new Pair<>(String.format(locale, "%04d", visitorsCount), COMPLIMENTS[new Random().nextInt(COMPLIMENTS.length)]);
+        int storedVisitorsCountAsInt = Integer.valueOf(Hawk.get(getModuleIdentifier(), new Pair<String, String>("0", null)).first);
+        return new Pair<>(String.format(locale, "%04d", storedVisitorsCountAsInt + 1), COMPLIMENTS[new Random().nextInt(COMPLIMENTS.length)]);
     }
 }
