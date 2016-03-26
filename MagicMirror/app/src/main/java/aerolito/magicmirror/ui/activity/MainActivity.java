@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int HIDE_UI_DELAY = 5000;
 
-    private static final int SLEEP_DELAY = !BuildConfig.DEV ? 15 * 1000 : 60 * 1000 * 15;
+    private static final int SLEEP_DELAY = !BuildConfig.DEV ? 30 * 1000 : 60 * 1000 * 15;
     private static final int WAKE_UP_DELAY = 0;
 
     private static final int OFF_BRIGHTNESS = 0;
@@ -143,10 +143,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_HEADSETHOOK) {
-            // Ligamos a tela (brilho no máximo) e agendamos pra apagar (brilho no mínimo) com um delay
-            if (BuildConfig.DEV) {
-                Toast.makeText(getApplicationContext(), "RECEIVED JACK INPUT!", Toast.LENGTH_SHORT).show();
-            }
+            logger.i("Received Jack input", true);
             onMirrorActive();
             return true;
         }
@@ -160,6 +157,23 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onKeyLongPress(keyCode, event);
+    }
+
+    /**
+     * Liga a tela (aumenta o brilho) e mostra o conteúdo após um delay de {@link MainActivity#WAKE_UP_DELAY}
+     */
+    private void wakeUpNow() {
+        wakeUpHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                ContentResolver cResolver = getApplicationContext().getContentResolver();
+                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
+                overlayView.setVisibility(View.INVISIBLE);
+                if (BuildConfig.DEV) {
+                    Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }, WAKE_UP_DELAY);
     }
 
     /**
@@ -182,22 +196,6 @@ public class MainActivity extends AppCompatActivity {
         }, SLEEP_DELAY);
     }
 
-    /**
-     * Liga a tela (aumenta o brilho) e mostra o conteúdo após um delay de {@link MainActivity#WAKE_UP_DELAY}
-     */
-    private void wakeUpNow() {
-        wakeUpHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                ContentResolver cResolver = getApplicationContext().getContentResolver();
-                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
-                overlayView.setVisibility(View.INVISIBLE);
-                if (BuildConfig.DEV) {
-                    Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
-                }
-            }
-        }, WAKE_UP_DELAY);
-    }
 
     /**
      * Força fullscreen, escondendo a barra de status (topo) e navegação (em baixo) após um pequeno delay
@@ -216,8 +214,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void onMirrorActive() {
+        // Ligamos a tela (aumentar o brilho) e agendamos pra apagar (diminuir o brilho) com um delay
         wakeUpNow();
         refreshScheduledSleep();
+
         dateModule.run(new Module.OnModuleResult() {
             @Override
             public void onModuleResult(Object result) {
@@ -297,21 +297,21 @@ public class MainActivity extends AppCompatActivity {
                                         // Ou vai até o valor final se é última repetição
                                         int toValue;
                                         int prevEndValue = (int) animatedValue;
-                                        Integer finalValueInt = Integer.valueOf(String.valueOf(finalValue));
-                                        if (repeatCount != repeats) {
+                                        if (repeatCount != 0) {
                                             if (prevEndValue > 3) {
                                                 toValue = visitorsRandom.nextInt(3);
                                             } else {
                                                 toValue = visitorsRandom.nextInt(5) + 4;
                                             }
                                         } else {
-                                            toValue = finalValueInt;
+                                            // Último é mais rápido pra ficar mais smooth
+                                            repeatableCountAnimationTextView.setAnimationDuration(100);
+                                            toValue = Integer.valueOf(String.valueOf(finalValue));
                                         }
                                         repeatableCountAnimationTextView.setCountValues(prevEndValue, toValue);
                                     }
                                 });
-                        repeatableCountAnimationTextView
-                                .startCountAnimation();
+                        repeatableCountAnimationTextView.startCountAnimation();
                     }
                 });
             }

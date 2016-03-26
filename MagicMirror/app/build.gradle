@@ -11,17 +11,43 @@ android {
         versionCode 1
         versionName "1.0"
     }
+//    signingConfigs {
+//        release {
+//            storeFile file("tomorrow.jks")
+//            storePassword "keytomorrow"
+//            keyAlias "Tomorrow"
+//            keyPassword "tomorrow"
+//        }
+//    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+//            signingConfig = android.signingConfigs.release
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            zipAlignEnabled true
+
+            applicationVariants.all { variant ->
+                variant.outputs.each { output ->
+                    def outputFile = output.outputFile
+                    if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                        def fileName = outputFile.name.replace('.apk', "-${versionName}.apk")
+                        output.outputFile = new File(outputFile.parent, fileName)
+                    }
+                }
+            }
         }
     }
     productFlavors {
         developing {
+            applicationIdSuffix ".dev"
             buildConfigField 'boolean', 'DEV', 'true'
         }
         demo {
+            applicationIdSuffix ".demo"
             buildConfigField 'boolean', 'DEV', 'false'
         }
     }
@@ -29,7 +55,6 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.android.support:support-v4:23.1.1'
 

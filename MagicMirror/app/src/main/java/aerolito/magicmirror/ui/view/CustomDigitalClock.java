@@ -17,7 +17,7 @@ public class CustomDigitalClock extends TextView {
     Calendar calendar;
 
     private final static String f12 = "h:mm aa";
-    private final static String f24 = "HH:mm";
+    private final static String f24 = "k:mm";
 
     private Runnable ticker;
     private Handler handler;

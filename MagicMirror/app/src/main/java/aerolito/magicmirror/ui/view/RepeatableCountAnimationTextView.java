@@ -22,6 +22,7 @@ public class RepeatableCountAnimationTextView extends TextView {
 
     private int fromValue;
     private int toValue;
+    private int repeatCount;
 
     public RepeatableCountAnimationTextView(Context context) {
         this(context, null, 0);
@@ -77,7 +78,8 @@ public class RepeatableCountAnimationTextView extends TextView {
                 isAnimating = false;
 
                 if (countAnimationListener == null) return;
-                countAnimationListener.onAnimationRepeat(countAnimator.getAnimatedValue(), countAnimator.getRepeatCount());
+                repeatCount -= 1;
+                countAnimationListener.onAnimationRepeat(countAnimator.getAnimatedValue(), repeatCount);
             }
         });
         countAnimator.setDuration(DEFAULT_DURATION);
@@ -136,7 +138,8 @@ public class RepeatableCountAnimationTextView extends TextView {
     }
 
     public RepeatableCountAnimationTextView setRepeatCount(int repeatCount) {
-        countAnimator.setRepeatCount(repeatCount);
+        this.repeatCount = repeatCount;
+        countAnimator.setRepeatCount(this.repeatCount);
         return this;
     }
 

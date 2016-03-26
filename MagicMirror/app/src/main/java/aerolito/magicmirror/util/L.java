@@ -33,7 +33,6 @@ public class L {
         i(tag, msg, false);
     }
 
-
     public void i(String tag, String msg, boolean disableToast) {
         if (BuildConfig.DEV && !disableToast) {
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
