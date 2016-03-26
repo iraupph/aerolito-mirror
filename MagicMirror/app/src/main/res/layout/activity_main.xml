@@ -106,8 +106,8 @@
             <com.romainpiel.shimmer.ShimmerTextView
                 android:id="@+id/compliment_content"
                 android:layout_width="wrap_content"
-                android:textAllCaps="true"
                 android:layout_height="wrap_content"
+                android:textAllCaps="true"
                 android:textSize="@dimen/material_text_display3"
                 android:visibility="invisible"
                 tools:text="Radiante"

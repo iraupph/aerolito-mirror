@@ -1,6 +1,7 @@
 package aerolito.magicmirror.module.base;
 
 import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -8,15 +9,24 @@ import com.orhanobut.hawk.Hawk;
 
 import java.util.Locale;
 
+import aerolito.magicmirror.util.L;
+
 public abstract class Module {
 
     private boolean initialized;
-    private Gson gson;
     protected Locale locale;
+    private L logger;
+    private Gson gson;
 
-    public void init(Object... args) {
+    private String formatLogMessage(String message) {
+        String moduleName = getModuleIdentifier().replaceAll(".*[.]", "");
+        return String.format("%s: %s", moduleName, message);
+    }
+
+    public void init(L logger, Object... args) {
         this.initialized = true;
         this.locale = new Locale("pt", "BR");
+        this.logger = logger;
         if (getStorageTypeToken() != null) {
             this.gson = new Gson();
         }
@@ -31,7 +41,10 @@ public abstract class Module {
             throw new IllegalStateException(String.format("\"init\" was not called for module %s", getModuleIdentifier()));
         }
         if (!skipStorage) {
+            logger.i(formatLogMessage("Stored value notified"), true);
             listener.onModuleResult(getStorageResult());
+        } else {
+            logger.i(formatLogMessage("Skipping storage value"), true);
         }
         new ModuleProcessAsyncTask(listener, args).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
@@ -42,8 +55,12 @@ public abstract class Module {
         return null;
     }
 
+    @Nullable
     private Object getStorageResult() {
         Object stored = Hawk.get(getModuleIdentifier(), null);
+        if (stored == null) {
+            logger.i(formatLogMessage("No storage value"), true);
+        }
         if (gson != null && stored != null) {
             stored = gson.fromJson(gson.toJsonTree(stored), getStorageTypeToken().getType());
         }
@@ -54,6 +71,7 @@ public abstract class Module {
         return Hawk.put(getModuleIdentifier(), result);
     }
 
+    @Nullable
     protected abstract Object getProcessedResult(Object... args);
 
     private class ModuleProcessAsyncTask extends AsyncTask<Void, Void, Object> {
@@ -68,13 +86,20 @@ public abstract class Module {
 
         @Override
         protected Object doInBackground(Void... voids) {
+            logger.i(formatLogMessage("Starting processing"), true);
             return getProcessedResult(args);
         }
 
         @Override
         protected void onPostExecute(Object processedResult) {
-            listener.onModuleResult(processedResult);
-            putStorageResult(processedResult);
+            logger.i(formatLogMessage("Finished processing"), true);
+            if (processedResult != null) {
+                logger.i(formatLogMessage("Processed value notified"), true);
+                listener.onModuleResult(processedResult);
+                putStorageResult(processedResult);
+            } else {
+                logger.i(formatLogMessage("No processing value"), true);
+            }
         }
     }
 

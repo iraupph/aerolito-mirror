@@ -6,6 +6,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:maxLength="1"
+    android:textColor="#A6FFFFFF"
     android:textSize="@dimen/material_text_display3"
     android:visibility="invisible"
     tools:showIn="@layout/activity_main"

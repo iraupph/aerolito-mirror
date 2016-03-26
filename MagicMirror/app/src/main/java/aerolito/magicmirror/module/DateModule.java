@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 import aerolito.magicmirror.module.base.Module;
+import aerolito.magicmirror.util.L;
 
 public class DateModule extends Module {
 
@@ -24,8 +25,8 @@ public class DateModule extends Module {
     }
 
     @Override
-    public void init(Object... args) {
-        super.init(args);
+    public void init(L logger, Object... args) {
+        super.init(logger, args);
         DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(locale);
         dateFormatSymbols.setWeekdays(WEEKDAYS);
         dateFormatSymbols.setShortWeekdays(SHORT_WEEKDAYS);

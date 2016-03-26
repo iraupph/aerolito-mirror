@@ -43,9 +43,9 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
 
-    public L log;
+    public L logger;
 
-    private static final int HIDE_UI_DELAY = 1000;
+    private static final int HIDE_UI_DELAY = 5000;
 
     private static final int SLEEP_DELAY = !BuildConfig.DEV ? 15 * 1000 : 60 * 1000 * 15;
     private static final int WAKE_UP_DELAY = 0;
@@ -78,14 +78,20 @@ public class MainActivity extends AppCompatActivity {
     private DateModule dateModule = DateModule.getInstance();
     private LocationModule locationModule = LocationModule.getInstance();
     private WeatherModule weatherModule = WeatherModule.getInstance();
-    private GreetingModule greetingModule = GreetingModule.getInstance();
-    private WikipediaModule wikipediaModule = WikipediaModule.getInstance();
 
-    private Animation scrollHorizontallyAnimation;
+    private GreetingModule greetingModule = GreetingModule.getInstance();
     private EventsTask eventsTask;
-    private Shimmer shimmer;
+    private final Shimmer shimmer = new Shimmer()
+            .setRepeatCount(ValueAnimator.INFINITE)
+            .setDuration(SHIMMER_DURATION)
+            .setStartDelay(SHIMMER_START_DELAY)
+            .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
+    private final Random visitorsRandom = new Random();
     private final Object digitsLock = new Object();
-    private Random visitorsRandom = new Random();
+
+    private WikipediaModule wikipediaModule = WikipediaModule.getInstance();
+    private Animation scrollHorizontallyAnimation;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +99,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        log = L.getInstance(getApplicationContext());
+        logger = L.getInstance(getApplicationContext());
+        logger.i("Magic mirror is being started", true);
 
         // Listener pra caso alguém toque na tela esconder as barras do sistema que vão aparecer
         getWindow().getDecorView().setOnSystemUiVisibilityChangeListener
@@ -111,23 +118,104 @@ public class MainActivity extends AppCompatActivity {
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
 
-        shimmer = new Shimmer();
-        shimmer.setRepeatCount(ValueAnimator.INFINITE)
-                .setDuration(SHIMMER_DURATION)
-                .setStartDelay(SHIMMER_START_DELAY)
-                .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
-
-        dateModule.init();
-        locationModule.init(getApplicationContext());
-        weatherModule.init();
-        greetingModule.init();
-        wikipediaModule.init();
+        dateModule.init(logger);
+        locationModule.init(logger, getApplicationContext());
+        weatherModule.init(logger);
+        greetingModule.init(logger);
+        wikipediaModule.init(logger);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         makeFullscreen();
+        onMirrorActive();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (eventsTask != null) {
+            eventsTask.setRunning(false);
+        }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_HEADSETHOOK) {
+            // Ligamos a tela (brilho no máximo) e agendamos pra apagar (brilho no mínimo) com um delay
+            if (BuildConfig.DEV) {
+                Toast.makeText(getApplicationContext(), "RECEIVED JACK INPUT!", Toast.LENGTH_SHORT).show();
+            }
+            onMirrorActive();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            onKeyDown(KeyEvent.KEYCODE_HEADSETHOOK, null);
+            return true;
+        }
+        return super.onKeyLongPress(keyCode, event);
+    }
+
+    /**
+     * Desliga a tela (diminui o brilho) e esconde o conteúdo após um delay de {@link MainActivity#SLEEP_DELAY}
+     */
+    private void refreshScheduledSleep() {
+        // Remover qualquer agendamento...
+        sleepHandler.removeCallbacksAndMessages(null);
+        // ... e criar um novo
+        sleepHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (BuildConfig.DEV) {
+                    Toast.makeText(getApplicationContext(), "SCREEN OFF", Toast.LENGTH_SHORT).show();
+                }
+                ContentResolver cResolver = getApplicationContext().getContentResolver();
+                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, OFF_BRIGHTNESS);
+                overlayView.setVisibility(View.VISIBLE);
+            }
+        }, SLEEP_DELAY);
+    }
+
+    /**
+     * Liga a tela (aumenta o brilho) e mostra o conteúdo após um delay de {@link MainActivity#WAKE_UP_DELAY}
+     */
+    private void wakeUpNow() {
+        wakeUpHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                ContentResolver cResolver = getApplicationContext().getContentResolver();
+                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
+                overlayView.setVisibility(View.INVISIBLE);
+                if (BuildConfig.DEV) {
+                    Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }, WAKE_UP_DELAY);
+    }
+
+    /**
+     * Força fullscreen, escondendo a barra de status (topo) e navegação (em baixo) após um pequeno delay
+     */
+    private void makeFullscreen() {
+        uiChangesHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                int systemUiFlagHideNavigation = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    systemUiFlagHideNavigation |= View.SYSTEM_UI_FLAG_FULLSCREEN;
+                }
+                getWindow().getDecorView().setSystemUiVisibility(systemUiFlagHideNavigation);
+            }
+        }, HIDE_UI_DELAY);
+    }
+
+    private void onMirrorActive() {
         wakeUpNow();
         refreshScheduledSleep();
         dateModule.run(new Module.OnModuleResult() {
@@ -175,45 +263,10 @@ public class MainActivity extends AppCompatActivity {
 
         );
         greetingModule.run(new Module.OnModuleResult() {
-            private void setDelayedVisitorDigit(final int visitorPosition, final String visitorsStr, final String compliment) {
-                final TextView visitorDigit = (TextView) visitorsView.getChildAt(visitorPosition);
-                visitorDigit.setText(String.valueOf(visitorsStr.charAt(visitorPosition)));
-                visitorDigit.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        visitorDigit.setVisibility(View.VISIBLE);
-                        if (visitorPosition > 0) {
-                            setDelayedVisitorDigit(visitorPosition - 1, visitorsStr, compliment);
-                        } else {
-                            complimentTitleView.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    complimentTitleView.setVisibility(View.VISIBLE);
-                                    complimentContentView.postDelayed(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            complimentContentView.setText(compliment);
-                                            complimentContentView.post(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    complimentContentView.setVisibility(View.VISIBLE);
-                                                    shimmer.start(complimentContentView);
-                                                }
-                                            });
-                                        }
-                                    }, GREETING_REVEAL_DELAY);
-                                }
-                            }, GREETING_REVEAL_DELAY);
-                        }
-                    }
-                }, GREETING_REVEAL_DELAY);
-            }
-
             private void startCountdown(final RepeatableCountAnimationTextView textView, final int repeats, final char finalValue, final boolean isLastDigit) {
                 textView.post(new Runnable() {
                     @Override
                     public void run() {
-                        // Números altos pra dar mais "giro" no contador
                         int startValue = visitorsRandom.nextInt(3);
                         int endValue = visitorsRandom.nextInt(5) + 4;
                         final RepeatableCountAnimationTextView repeatableCountAnimationTextView =
@@ -245,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
                                         int toValue;
                                         int prevEndValue = (int) animatedValue;
                                         Integer finalValueInt = Integer.valueOf(String.valueOf(finalValue));
-                                        if (repeatCount != finalValue) {
+                                        if (repeatCount != repeats) {
                                             if (prevEndValue > 3) {
                                                 toValue = visitorsRandom.nextInt(3);
                                             } else {
@@ -324,85 +377,11 @@ public class MainActivity extends AppCompatActivity {
                     if (eventsTask == null || !eventsTask.isRunning()) {
                         eventsTask = new EventsTask(events);
                         eventsTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                        eventsTask.setEvents(events);
                     }
+                    eventsTask.setEvents(events);
                 }
             }
         });
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (eventsTask != null) {
-            eventsTask.setRunning(false);
-        }
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_HEADSETHOOK) {
-            // Ligamos a tela (brilho no máximo) e agendamos pra apagar (brilho no mínimo) com um delay
-            if (BuildConfig.DEV) {
-                Toast.makeText(getApplicationContext(), "RECEIVED JACK INPUT!", Toast.LENGTH_SHORT).show();
-            }
-            wakeUpNow();
-            refreshScheduledSleep();
-        }
-        return true;
-    }
-
-    /**
-     * Desliga a tela (diminui o brilho) e esconde o conteúdo após um delay de {@link MainActivity#SLEEP_DELAY}
-     */
-    private void refreshScheduledSleep() {
-        // Remover qualquer agendamento...
-        sleepHandler.removeCallbacksAndMessages(null);
-        // ... e criar um novo
-        sleepHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (BuildConfig.DEV) {
-                    Toast.makeText(getApplicationContext(), "SCREEN OFF", Toast.LENGTH_SHORT).show();
-                }
-                ContentResolver cResolver = getApplicationContext().getContentResolver();
-                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, OFF_BRIGHTNESS);
-                overlayView.setVisibility(View.VISIBLE);
-            }
-        }, SLEEP_DELAY);
-    }
-
-    /**
-     * Liga a tela (aumenta o brilho) e mostra o conteúdo após um delay de {@link MainActivity#WAKE_UP_DELAY}
-     */
-    private void wakeUpNow() {
-        wakeUpHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                ContentResolver cResolver = getApplicationContext().getContentResolver();
-                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
-                overlayView.setVisibility(View.INVISIBLE);
-                if (BuildConfig.DEV) {
-                    Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
-                }
-            }
-        }, WAKE_UP_DELAY);
-    }
-
-    /**
-     * Força fullscreen, escondendo a barra de status (topo) e navegação (em baixo) após um pequeno delay
-     */
-    private void makeFullscreen() {
-        uiChangesHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                int systemUiFlagHideNavigation = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    systemUiFlagHideNavigation |= View.SYSTEM_UI_FLAG_FULLSCREEN;
-                }
-                getWindow().getDecorView().setSystemUiVisibility(systemUiFlagHideNavigation);
-            }
-        }, HIDE_UI_DELAY);
     }
 
     private void toggleTextView(TextView view, int visibility, @Nullable String text) {

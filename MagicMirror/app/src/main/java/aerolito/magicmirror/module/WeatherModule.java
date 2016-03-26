@@ -17,6 +17,7 @@ import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
 import aerolito.magicmirror.model.OpenWeatherResponse;
 import aerolito.magicmirror.module.base.Module;
+import aerolito.magicmirror.util.L;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
@@ -53,8 +54,8 @@ public class WeatherModule extends Module {
     }
 
     @Override
-    public void init(Object... args) {
-        super.init(args);
+    public void init(L logger, Object... args) {
+        super.init(logger, args);
 
         this.forecastsMapping = new HashMap<>();
         this.forecastsMapping.put("Clouds", R.drawable.vc_weather_cloud);
@@ -92,7 +93,7 @@ public class WeatherModule extends Module {
         } catch (IOException e) {
             response = null;
         }
-        List<Pair<String, Pair<String, Integer>>> forecastSummary = new ArrayList<>();
+        List<Pair<String, Pair<String, Integer>>> forecastSummary = null;
         if (response != null) {
             // Contamos quantas previsões são de hoje ainda e pulamos todas elas (pra mostrar só a partir de amanhã)
             int today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
@@ -106,17 +107,20 @@ public class WeatherModule extends Module {
                     break;
                 }
             }
-            // Pega a previsão das 9 AM
-            for (int i = todayForecastsCount + 3; i < response.forecasts.size(); i += 7) {
-                OpenWeatherResponse.Forecast forecast = response.forecasts.get(i);
-                Calendar forecastCalendar = Calendar.getInstance();
-                forecastCalendar.setTime(forecast.dateTime);
-                float averageTemperature = (forecast.temperature.minTemp + forecast.temperature.maxTemp) / 2;
-                // TODO: Menos hackish
-                String processedResult = (String) dateModule.getProcessedResult(forecastCalendar);
-                forecastSummary.add(new Pair<>(processedResult,
-                        // Locale.US pra botar o separador como um ponto
-                        new Pair<>(String.format(Locale.US, "%.1f  °C", averageTemperature), forecastsMapping.get(forecast.weather.get(0).weather))));
+            if (response.forecasts.size() > 0) {
+                forecastSummary = new ArrayList<>();
+                // Pega a previsão das 9 AM
+                for (int i = todayForecastsCount + 3; i < response.forecasts.size(); i += 7) {
+                    OpenWeatherResponse.Forecast forecast = response.forecasts.get(i);
+                    Calendar forecastCalendar = Calendar.getInstance();
+                    forecastCalendar.setTime(forecast.dateTime);
+                    float averageTemperature = (forecast.temperature.minTemp + forecast.temperature.maxTemp) / 2;
+                    // TODO: Menos hackish
+                    String formattedDate = (String) dateModule.getProcessedResult(forecastCalendar);
+                    forecastSummary.add(new Pair<>(formattedDate,
+                            // Locale.US pra botar o separador como um ponto
+                            new Pair<>(String.format(Locale.US, "%.1f °C", averageTemperature), forecastsMapping.get(forecast.weather.get(0).weather))));
+                }
             }
         }
         return forecastSummary;

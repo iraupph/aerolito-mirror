@@ -42,22 +42,27 @@ public class WikipediaModule extends Module {
 
     @Override
     protected Object getProcessedResult(Object... args) {
-        List<Map.Entry<String, String>> titleAndEventList = new ArrayList<>();
+        List<Map.Entry<String, String>> titleAndEventList = null;
         try {
             Document document = Jsoup.connect(WIKIPEDIA_BR_HOME).get();
             Elements elementsEvents = document.select(RECENT_ELEMENT);
-            if (elementsEvents.size() > 0) {
-                titleAndEventList.addAll(processItems(RECENT_TITLE, elementsEvents.get(0)));
-            }
-
             Elements elementsTodayLists = document.select(HISTORY_ELEMENT);
-            switch (elementsTodayLists.size()) {
-                case 3:
-                    titleAndEventList.addAll(processItems(HISTORY_TITLE, elementsTodayLists.get(0)));
-                case 2:
-                    titleAndEventList.addAll(processItems(BORN_TITLE, elementsTodayLists.get(1)));
-                case 1:
-                    titleAndEventList.addAll(processItems(DIED_TITLE, elementsTodayLists.get(2)));
+
+            if (elementsEvents.size() > 0 || elementsTodayLists.size() > 0) {
+                titleAndEventList = new ArrayList<>();
+
+                if (elementsEvents.size() > 0) {
+                    titleAndEventList.addAll(processItems(RECENT_TITLE, elementsEvents.get(0)));
+                }
+
+                switch (elementsTodayLists.size()) {
+                    case 3:
+                        titleAndEventList.addAll(processItems(HISTORY_TITLE, elementsTodayLists.get(0)));
+                    case 2:
+                        titleAndEventList.addAll(processItems(BORN_TITLE, elementsTodayLists.get(1)));
+                    case 1:
+                        titleAndEventList.addAll(processItems(DIED_TITLE, elementsTodayLists.get(2)));
+                }
             }
         } catch (IOException e) {
         }

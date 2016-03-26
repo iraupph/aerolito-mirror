@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.List;
 
 import aerolito.magicmirror.module.base.Module;
+import aerolito.magicmirror.util.L;
 import io.nlopez.smartlocation.OnLocationUpdatedListener;
 import io.nlopez.smartlocation.SmartLocation;
 
@@ -20,15 +21,15 @@ public class LocationModule extends Module {
 
     private static final int LOCATION_TIMEOUT = 15 * 1000;
 
-    private String city;
-    private String country;
+    private Context context;
+
+    private Pair<String, String> cityAndCountry;
 
     private Handler locationHandler;
     private FinalizeLocationRunnable locationRunnable;
     private final Object locationSemaphore = new Object();
 
     private static LocationModule instance = new LocationModule();
-    private Context context;
 
     public static LocationModule getInstance() {
         return instance;
@@ -38,11 +39,12 @@ public class LocationModule extends Module {
     }
 
     @Override
-    public void init(Object... args) {
-        super.init(args);
+    public void init(L logger, Object... args) {
+        super.init(logger, args);
         context = (Context) args[0];
         locationHandler = new Handler();
         locationRunnable = new FinalizeLocationRunnable();
+        cityAndCountry = null;
     }
 
     @Override
@@ -58,19 +60,20 @@ public class LocationModule extends Module {
                     @Override
                     public void onLocationUpdated(Location location) {
                         try {
-                            List<Address> addresses = new Geocoder(context,
-                                    locale).getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                            List<Address> addresses = new Geocoder(context, locale)
+                                    .getFromLocation(location.getLatitude(), location.getLongitude(), 1);
                             if (addresses != null && !addresses.isEmpty()) {
                                 Address address = addresses.get(0);
                                 // Supostamente é o nome da cidade nessa função ;-)
                                 String locality = address.getLocality();
-                                country = address.getCountryName();
+                                String city;
                                 if (locality != null) {
                                     city = locality;
                                     finalizeLocation();
                                 } else {
                                     city = address.getAddressLine(CITY_ADDRESS_LINE);
                                 }
+                                cityAndCountry = new Pair<>(city, address.getCountryName());
                             }
                         } catch (IOException e) {
                         }
@@ -82,7 +85,7 @@ public class LocationModule extends Module {
             } catch (InterruptedException e) {
             }
         }
-        return new Pair<>(city, country);
+        return cityAndCountry;
     }
 
     private void finalizeLocation() {
