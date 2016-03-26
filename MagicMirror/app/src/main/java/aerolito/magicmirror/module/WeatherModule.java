@@ -87,7 +87,8 @@ public class WeatherModule extends Module {
         String city = (String) args[0], country = (String) args[1];
         OpenWeatherResponse response;
         try {
-            response = endpoint().nextFiveDaysForecast(OPEN_WEATHER_API_KEY, String.format("%s,%s", city, isoCountryMapping.get(country)), UNIT_METRIC).execute().body();
+            response = endpoint().nextFiveDaysForecast(OPEN_WEATHER_API_KEY,
+                    String.format("%s,%s", city, isoCountryMapping.get(country)), UNIT_METRIC).execute().body();
         } catch (IOException e) {
             response = null;
         }

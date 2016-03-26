@@ -64,7 +64,6 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/visitors"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/forecasts"
@@ -79,6 +78,7 @@
                 android:textSize="@dimen/material_text_display1"/>
 
             <LinearLayout
+                android:id="@+id/visitors"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">

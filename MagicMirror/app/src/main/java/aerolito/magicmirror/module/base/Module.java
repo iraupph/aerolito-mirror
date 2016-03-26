@@ -6,13 +6,17 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.orhanobut.hawk.Hawk;
 
+import java.util.Locale;
+
 public abstract class Module {
 
     private boolean initialized;
     private Gson gson;
+    protected Locale locale;
 
     public void init(Object... args) {
         this.initialized = true;
+        this.locale = new Locale("pt", "BR");
         if (getStorageTypeToken() != null) {
             this.gson = new Gson();
         }

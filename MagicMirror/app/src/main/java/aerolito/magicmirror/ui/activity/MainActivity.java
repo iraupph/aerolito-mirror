@@ -1,5 +1,6 @@
 package aerolito.magicmirror.ui.activity;
 
+import android.animation.ValueAnimator;
 import android.content.ContentResolver;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -23,6 +24,7 @@ import android.widget.Toast;
 import com.orhanobut.hawk.Hawk;
 import com.orhanobut.hawk.HawkBuilder;
 import com.orhanobut.hawk.LogLevel;
+import com.romainpiel.shimmer.Shimmer;
 import com.romainpiel.shimmer.ShimmerTextView;
 
 import java.util.AbstractMap;
@@ -34,7 +36,7 @@ import java.util.Random;
 import aerolito.magicmirror.BuildConfig;
 import aerolito.magicmirror.R;
 import aerolito.magicmirror.module.DateModule;
-import aerolito.magicmirror.module.GreetingHelper;
+import aerolito.magicmirror.module.GreetingModule;
 import aerolito.magicmirror.module.LocationModule;
 import aerolito.magicmirror.module.WeatherModule;
 import aerolito.magicmirror.module.WikipediaHelper;
@@ -57,6 +59,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int OFF_BRIGHTNESS = 0;
     private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
+    private static final int GREETING_REVEAL_DELAY = 1000;
+    private static final int SHIMMER_DURATION = 1500;
+    private static final int SHIMMER_START_DELAY = 700;
+
     @Bind(R.id.location) TextView locationView;
     @Bind(R.id.date) TextView dateView;
     @Bind(R.id.forecasts) LinearLayout forecastsView;
@@ -75,15 +81,14 @@ public class MainActivity extends AppCompatActivity {
 
     private DateModule dateModule = DateModule.getInstance();
     private LocationModule locationModule = LocationModule.getInstance();
+    private WeatherModule weatherModule = WeatherModule.getInstance();
+    private GreetingModule greetingModule = GreetingModule.getInstance();
 
     private WikipediaHelper wikipediaHelper = WikipediaHelper.getInstance();
     private List<Map.Entry<String, String>> news;
     private Animation scrollHorizontallyAnimation;
     private AsyncTask<Void, Map.Entry<String, String>, Void> eventsTask;
 
-    private WeatherModule weatherModule = WeatherModule.getInstance();
-
-    private GreetingHelper greetingHelper = GreetingHelper.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,8 +114,6 @@ public class MainActivity extends AppCompatActivity {
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
 
-        greetingHelper.setup(visitorsView, complimentTitleView, complimentContentView);
-
         HawkBuilder hawkBuilder = Hawk.init(this)
                 .setEncryptionMethod(HawkBuilder.EncryptionMethod.NO_ENCRYPTION)
                 .setStorage(HawkBuilder.newSharedPrefStorage(this));
@@ -122,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
         dateModule.init();
         locationModule.init(getApplicationContext());
         weatherModule.init();
+        greetingModule.init();
     }
 
     @Override
@@ -181,7 +185,55 @@ public class MainActivity extends AppCompatActivity {
                 OnWikipediaProcessedListener()
 
         );
-        greetingHelper.updateGreeting();
+        greetingModule.run(new Module.OnModuleResult() {
+            private void setDelayedVisitorDigit(final int visitorPosition, final String visitorsStr, final String compliment) {
+                final TextView visitorDigit = (TextView) visitorsView.getChildAt(visitorPosition);
+                visitorDigit.setText(String.valueOf(visitorsStr.charAt(visitorPosition)));
+                visitorDigit.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        visitorDigit.setVisibility(View.VISIBLE);
+                        if (visitorPosition > 0) {
+                            setDelayedVisitorDigit(visitorPosition - 1, visitorsStr, compliment);
+                        } else {
+                            complimentTitleView.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    complimentTitleView.setVisibility(View.VISIBLE);
+                                    complimentContentView.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            complimentContentView.setVisibility(View.VISIBLE);
+                                            complimentContentView.setText(compliment);
+                                            Shimmer shimmer = new Shimmer();
+                                            shimmer.setRepeatCount(ValueAnimator.INFINITE)
+                                                    .setDuration(SHIMMER_DURATION)
+                                                    .setStartDelay(SHIMMER_START_DELAY)
+                                                    .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
+                                            shimmer.start(complimentContentView);
+                                        }
+                                    }, GREETING_REVEAL_DELAY);
+                                }
+                            }, GREETING_REVEAL_DELAY);
+                        }
+                    }
+                }, GREETING_REVEAL_DELAY);
+            }
+
+            @Override
+            public void onModuleResult(Object result) {
+                Pair<String, String> visitorsAndCompliment = (Pair<String, String>) result;
+                if (visitorsAndCompliment != null) {
+                    for (int i = 0; i < visitorsView.getChildCount(); i++) {
+                        visitorsView.getChildAt(i).setVisibility(View.INVISIBLE);
+                    }
+                    complimentTitleView.setVisibility(View.INVISIBLE);
+                    complimentContentView.setVisibility(View.INVISIBLE);
+                    String visitorsStr = visitorsAndCompliment.first;
+                    setDelayedVisitorDigit(visitorsStr.length() - 1, visitorsStr, visitorsAndCompliment.second);
+                }
+            }
+        });
     }
 
     @Override

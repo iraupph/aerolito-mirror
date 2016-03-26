@@ -9,7 +9,6 @@ import android.util.Pair;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 
 import aerolito.magicmirror.module.base.Module;
 import io.nlopez.smartlocation.OnLocationUpdatedListener;
@@ -60,7 +59,7 @@ public class LocationModule extends Module {
                     public void onLocationUpdated(Location location) {
                         try {
                             List<Address> addresses = new Geocoder(context,
-                                    Locale.getDefault()).getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                                    locale).getFromLocation(location.getLatitude(), location.getLongitude(), 1);
                             if (addresses != null && !addresses.isEmpty()) {
                                 Address address = addresses.get(0);
                                 // Supostamente é o nome da cidade nessa função ;-)

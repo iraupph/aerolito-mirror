@@ -3,7 +3,6 @@ package aerolito.magicmirror.module;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Locale;
 
 import aerolito.magicmirror.module.base.Module;
 
@@ -27,12 +26,12 @@ public class DateModule extends Module {
     @Override
     public void init(Object... args) {
         super.init(args);
-        DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(Locale.getDefault());
+        DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(locale);
         dateFormatSymbols.setWeekdays(WEEKDAYS);
         dateFormatSymbols.setShortWeekdays(SHORT_WEEKDAYS);
-        this.defaultDateFormat = new SimpleDateFormat("EEEE', 'd ' de 'MMMM", Locale.getDefault());
+        this.defaultDateFormat = new SimpleDateFormat("EEEE', 'd ' de 'MMMM", locale);
         this.defaultDateFormat.setDateFormatSymbols(dateFormatSymbols);
-        this.forecastDateFormat = new SimpleDateFormat("EE', 'd", Locale.getDefault());
+        this.forecastDateFormat = new SimpleDateFormat("EE', 'd", locale);
         this.forecastDateFormat.setDateFormatSymbols(dateFormatSymbols);
     }
 
