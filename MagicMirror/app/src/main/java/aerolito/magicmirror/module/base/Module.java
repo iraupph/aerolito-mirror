@@ -22,11 +22,17 @@ public abstract class Module {
         }
     }
 
-    public final void run(final OnModuleResult listener, final Object... args) {
+    public final void run(final OnModuleResult listener) {
+        run(listener, false);
+    }
+
+    public final void run(final OnModuleResult listener, boolean skipStorage, final Object... args) {
         if (!initialized) {
             throw new IllegalStateException(String.format("\"init\" was not called for module %s", getModuleIdentifier()));
         }
-        listener.onModuleResult(getStorageResult());
+        if (!skipStorage) {
+            listener.onModuleResult(getStorageResult());
+        }
         new ModuleProcessAsyncTask(listener, args).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 

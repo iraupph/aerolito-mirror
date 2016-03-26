@@ -15,11 +15,11 @@ import aerolito.magicmirror.module.base.Module;
 
 public class WikipediaModule extends Module {
 
-    public final String WIKIPEDIA_BR_HOME = "https://pt.wikipedia.org/";
+    private final String WIKIPEDIA_BR_HOME = "https://pt.wikipedia.org/";
 
-    public final String RECENT_ELEMENT = "#mf-eventos-atuais ul";
-    public final String HISTORY_ELEMENT = ".plainlinks ul";
-    public final String ITEM_ELEMENT = "li";
+    private final String RECENT_ELEMENT = "#mf-eventos-atuais ul";
+    private final String HISTORY_ELEMENT = ".plainlinks ul";
+    private final String ITEM_ELEMENT = "li";
 
     private final String RECENT_TITLE = "Eventos recentes";
     private final String HISTORY_TITLE = "O dia na história";

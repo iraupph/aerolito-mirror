@@ -11,9 +11,9 @@ import aerolito.magicmirror.module.base.Module;
 public class GreetingModule extends Module {
 
     private String[] COMPLIMENTS = new String[]{
-            "RADIANTE", "SEXY", "ESPETACULAR", "SENSUAL", "UM ESTOURO", "ESTONTEANTE", "FENOMENAL",
-            "ELEGANTE", "SEM IGUAL", "FODA", "INCRÍVEL", "COM TUDO EM CIMA", "UM ARRASO", "COM TUDO",
-            "O MÁXIMO", "EXCELENTE", "AMÁVEL", "PEGÁVEL", "TRANSÁVEL"
+            "Radiante", "Sexy", "Espetacular", "Sensual", "Um Estouro", "Estonteante", "Fenomenal",
+            "Elegante", "Sem Igual", "Foda", "Incrível", "Arrasando", "Com Tudo",
+            "O Máximo", "Excelente", "Amável", "Pegável", "Transável"
     };
 
     private static GreetingModule instance = new GreetingModule();

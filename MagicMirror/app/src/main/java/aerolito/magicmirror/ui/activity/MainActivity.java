@@ -21,9 +21,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.orhanobut.hawk.Hawk;
-import com.orhanobut.hawk.HawkBuilder;
-import com.orhanobut.hawk.LogLevel;
 import com.romainpiel.shimmer.Shimmer;
 import com.romainpiel.shimmer.ShimmerTextView;
 
@@ -85,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Animation scrollHorizontallyAnimation;
     private EventsTask eventsTask;
+    private Shimmer shimmer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,13 +108,11 @@ public class MainActivity extends AppCompatActivity {
         wakeUpHandler = new Handler();
         sleepHandler = new Handler();
 
-        HawkBuilder hawkBuilder = Hawk.init(this)
-                .setEncryptionMethod(HawkBuilder.EncryptionMethod.NO_ENCRYPTION)
-                .setStorage(HawkBuilder.newSharedPrefStorage(this));
-        if (BuildConfig.DEV) {
-            hawkBuilder = hawkBuilder.setLogLevel(LogLevel.FULL);
-        }
-        hawkBuilder.build();
+        shimmer = new Shimmer();
+        shimmer.setRepeatCount(ValueAnimator.INFINITE)
+                .setDuration(SHIMMER_DURATION)
+                .setStartDelay(SHIMMER_START_DELAY)
+                .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
 
         dateModule.init();
         locationModule.init(getApplicationContext());
@@ -137,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 String resultStr = (String) result;
                 toggleTextView(dateView, resultStr != null ? View.VISIBLE : View.INVISIBLE, resultStr);
             }
-        });
+        }, true);
         locationModule.run(
                 new Module.OnModuleResult() {
                     @Override
@@ -162,16 +158,14 @@ public class MainActivity extends AppCompatActivity {
                                             dateView.setText(forecastData.first);
                                             iconView.setImageResource(forecastData.second.second);
                                             temperatureView.setText(forecastData.second.first);
-
                                             forecastView.setVisibility(View.VISIBLE);
                                         }
                                     } else {
                                         forecastsView.setVisibility(View.INVISIBLE);
                                     }
                                 }
-                            }, city, cityAndCountry.second);
+                            }, false, city, cityAndCountry.second);
                         }
-
                         toggleTextView(locationView, city != null ? View.VISIBLE : View.INVISIBLE, city);
                     }
                 }
@@ -195,14 +189,14 @@ public class MainActivity extends AppCompatActivity {
                                     complimentContentView.postDelayed(new Runnable() {
                                         @Override
                                         public void run() {
-                                            complimentContentView.setVisibility(View.VISIBLE);
                                             complimentContentView.setText(compliment);
-                                            Shimmer shimmer = new Shimmer();
-                                            shimmer.setRepeatCount(ValueAnimator.INFINITE)
-                                                    .setDuration(SHIMMER_DURATION)
-                                                    .setStartDelay(SHIMMER_START_DELAY)
-                                                    .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
-                                            shimmer.start(complimentContentView);
+                                            complimentContentView.post(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    complimentContentView.setVisibility(View.VISIBLE);
+                                                    shimmer.start(complimentContentView);
+                                                }
+                                            });
                                         }
                                     }, GREETING_REVEAL_DELAY);
                                 }
@@ -225,12 +219,12 @@ public class MainActivity extends AppCompatActivity {
                     setDelayedVisitorDigit(visitorsStr.length() - 1, visitorsStr, visitorsAndCompliment.second);
                 }
             }
-        });
+        }, true);
         wikipediaModule.run(new Module.OnModuleResult() {
             @Override
             public void onModuleResult(Object result) {
                 List<Map.Entry<String, String>> events = (List<Map.Entry<String, String>>) result;
-                if (events != null) {
+                if (events != null && events.size() > 0) {
                     if (eventsTask == null || !eventsTask.isRunning()) {
                         eventsTask = new EventsTask(events);
                         eventsTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
