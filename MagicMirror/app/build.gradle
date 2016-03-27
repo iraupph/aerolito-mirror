@@ -45,10 +45,16 @@ android {
         developing {
             applicationIdSuffix ".dev"
             buildConfigField 'boolean', 'DEV', 'true'
+            buildConfigField 'boolean', 'FONT', 'false'
+        }
+        devFont {
+            applicationIdSuffix ".dev.font"
+            buildConfigField 'boolean', 'DEV', 'true'
+            buildConfigField 'boolean', 'FONT', 'true'
         }
         demo {
-            applicationIdSuffix ".demo"
             buildConfigField 'boolean', 'DEV', 'false'
+            buildConfigField 'boolean', 'FONT', 'false'
         }
     }
 }
@@ -74,4 +80,6 @@ dependencies {
     compile 'com.jakewharton:butterknife:7.0.1'
 
     compile 'com.daasuu:CountAnimationTextView:0.1.1'
+
+    compile 'uk.co.chrisjenx:calligraphy:2.1.0'
 }

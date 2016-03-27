@@ -7,6 +7,8 @@ import com.orhanobut.hawk.HawkBuilder;
 import com.orhanobut.hawk.LogLevel;
 
 import aerolito.magicmirror.BuildConfig;
+import aerolito.magicmirror.R;
+import uk.co.chrisjenx.calligraphy.CalligraphyConfig;
 
 public class MainApplication extends Application {
 
@@ -21,5 +23,14 @@ public class MainApplication extends Application {
             hawkBuilder = hawkBuilder.setLogLevel(LogLevel.FULL);
         }
         hawkBuilder.build();
+
+        if (BuildConfig.FONT) {
+            CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
+//                    .setDefaultFontPath("font/Athelas.ttc")
+                    .setDefaultFontPath("font/Arvil_Sans.ttf")
+                    .setFontAttrId(R.attr.fontPath)
+                    .build()
+            );
+        }
     }
 }

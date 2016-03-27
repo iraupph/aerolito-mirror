@@ -3,6 +3,7 @@ package aerolito.magicmirror.ui.activity;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -41,6 +42,7 @@ import aerolito.magicmirror.ui.view.RepeatableCountAnimationTextView;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
 import butterknife.ButterKnife;
+import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -159,6 +161,11 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onKeyLongPress(keyCode, event);
+    }
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
     }
 
     /**
