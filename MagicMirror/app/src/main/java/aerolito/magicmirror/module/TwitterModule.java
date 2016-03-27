@@ -48,7 +48,8 @@ public class TwitterModule extends Module {
                 }
             }
         } catch (IOException e) {
-            logger.e(TAG, e.getMessage(), true);
+            String message = e.getMessage();
+            logger.e(TAG, message, true);
         }
         return trendingHashtags;
     }

@@ -1,7 +1,6 @@
 package aerolito.magicmirror.ui.activity;
 
 import android.animation.ValueAnimator;
-import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.os.AsyncTask;
@@ -11,6 +10,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.text.style.RelativeSizeSpan;
 import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.View;
@@ -23,6 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.binaryfork.spanny.Spanny;
 import com.romainpiel.shimmer.Shimmer;
 import com.romainpiel.shimmer.ShimmerTextView;
 
@@ -64,7 +65,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int SHIMMER_START_DELAY = 700;
 
     private static final String DIGITS_THREAD = "DIGITS_THREAD";
-    private static final String HASHTAGS_THREAD = "HASHTAGS_THREAD";
 
     @Bind(R.id.location) TextView locationView;
     @Bind(R.id.date) TextView dateView;
@@ -104,11 +104,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TwitterModule twitterModule = TwitterModule.getInstance();
     private HashtagsTask hashtagsTask;
-    //    private Semaphore hashtagsSemaphore;
-    //    private Thread twitterResultThread;
 
-
-    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface", "JavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -140,6 +136,15 @@ public class MainActivity extends AppCompatActivity {
         greetingModule.init(logger);
         wikipediaModule.init(logger);
         twitterModule.init(logger);
+
+        // Nossa fonte aparentemente não tem lowercase, usar span pra diferenciar
+        mirrorHashtagText.setText(new Spanny()
+                .append("#S", new RelativeSizeSpan(1f))
+                .append("mart", new RelativeSizeSpan(0.7f))
+                .append("M", new RelativeSizeSpan(1f))
+                .append("irror", new RelativeSizeSpan(0.7f))
+                .append("A", new RelativeSizeSpan(1f))
+                .append("erolito", new RelativeSizeSpan(0.7f)));
     }
 
     @Override
@@ -410,40 +415,10 @@ public class MainActivity extends AppCompatActivity {
                 String[] hashtagsArray = hashtags.toArray(new String[hashtags.size()]);
                 if (hashtags.size() > 0) {
                     if (hashtagsTask != null) {
-                        hashtagsTask.isRunning = false;
+                        hashtagsTask.setRunning(false);
                     }
                     hashtagsTask = new HashtagsTask(hashtagsArray);
                     hashtagsTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                    //                    if (twitterResultThread == null) {
-                    //                        twitterResultThread = new AsyncTask<Void, String, Void>(new Runnable() {
-                    //                            @Override
-                    //                            public void run() {
-                    //                                try {
-                    //                                    hashtagsSemaphore.acquire();
-                    //                                } catch (InterruptedException e) {
-                    //                                }
-                    //                                mirrorHashtagText.post(new Runnable() {
-                    //                                    @Override
-                    //                                    public void run() {
-                    //                                        hashtagsTitleText.setVisibility(View.VISIBLE);
-                    //                                        mirrorHashtagText.setVisibility(View.INVISIBLE);
-                    //                                        hashtagsText.setText("");
-                    //                                        delayHashtag(hashtags, 0);
-                    //                                    }
-                    //                                });
-                    //                            }
-                    //                        }, HASHTAGS_THREAD) {
-                    //                            @Override
-                    //                            protected Void doInBackground(Void... voids) {
-                    //                                return null;
-                    //                            }
-                    //                        };
-                    //                    } else {
-                    //                        if (twitterResultThread.isAlive()) {
-                    //                            twitterResultThread.interrupt();
-                    //                        }
-                    //                    }
-                    //                    twitterResultThread.start();
                 }
             }
 
@@ -554,17 +529,14 @@ public class MainActivity extends AppCompatActivity {
     private class HashtagsTask extends AsyncTask<Void, String, Void> {
 
         private static final int HASHTAG_DELAY = 700;
+        private static final int MAX_HASHTAGS = !BuildConfig.DEV ? 10 : 2;
 
-        private String[] hashtags;
         private boolean isRunning;
+        private String[] hashtags;
 
         private HashtagsTask(String[] hashtags) {
             this.hashtags = hashtags;
             this.isRunning = true;
-        }
-
-        public boolean isRunning() {
-            return isRunning;
         }
 
         public void setRunning(boolean running) {
@@ -588,7 +560,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     String content = hashtagsText.getText().toString();
                     hashtagsText.setText(String.format("%s %s", content, hashtag));
-                    if (isRunning && i < hashtags.length - 1 && i < 10) {
+                    if (isRunning && i < MAX_HASHTAGS && i < hashtags.length - 1) {
                         delayHashtag(hashtags, i + 1);
                     } else {
                         mirrorHashtagText.setVisibility(View.VISIBLE);

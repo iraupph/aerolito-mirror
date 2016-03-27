@@ -164,11 +164,9 @@
                     android:layout_marginEnd="4dp"
                     android:layout_marginStart="0dp"
                     android:lineSpacingExtra="4dp"
-                    android:maxLines="2"
+                    android:maxLines="3"
                     android:textSize="@dimen/material_text_display1"
-                    android:visibility="visible"
-                    tools:text="#Aerolito #MagicMirror"
-                    tools:visibility="visible"/>
+                    tools:text="#Aerolito #MagicMirror #FriendsOfTomorrow"/>
 
             </me.grantland.widget.AutofitLayout>
 
@@ -176,9 +174,10 @@
                 android:id="@+id/mirror_hashtag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="#SmartMirrorAerolito"
-                android:textSize="@dimen/material_text_display1"
+                android:textAllCaps="true"
+                android:textSize="@dimen/material_text_display2"
                 android:visibility="invisible"
+                tools:text="#SmartMirrorAerolito"
                 tools:visibility="visible"/>
 
         </LinearLayout>

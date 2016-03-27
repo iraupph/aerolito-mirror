@@ -8,8 +8,12 @@ import aerolito.magicmirror.BuildConfig;
 
 public class L {
 
-    private static L instance = new L();
+    public static final String UNSPECIFIED_ERROR = "Unspecified error log";
+    public static final String UNSPECIFIED_INFO = "Unspecified info log";
+
     private Context context;
+
+    private static L instance = new L();
 
     public static L getInstance(Context context) {
         instance.context = context;
@@ -37,7 +41,7 @@ public class L {
         if (BuildConfig.DEV && !disableToast) {
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
         }
-        Log.i(tag, msg);
+        Log.i(tag, msg != null ? msg : UNSPECIFIED_INFO);
     }
 
     public void e(String msg) {
@@ -56,6 +60,6 @@ public class L {
         if (BuildConfig.DEV && !disableToast) {
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
         }
-        Log.e(tag, msg);
+        Log.e(tag, msg != null ? msg : UNSPECIFIED_ERROR);
     }
 }
