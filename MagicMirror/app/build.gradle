@@ -82,4 +82,8 @@ dependencies {
     compile 'com.daasuu:CountAnimationTextView:0.1.1'
 
     compile 'uk.co.chrisjenx:calligraphy:2.1.0'
+
+    compile 'me.grantland:autofittextview:0.2.+'
+
+    compile 'com.binaryfork:spanny:1.0.3'
 }

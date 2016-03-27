@@ -15,7 +15,7 @@ public abstract class Module {
 
     private boolean initialized;
     protected Locale locale;
-    private L logger;
+    protected L logger;
     private Gson gson;
 
     private String formatLogMessage(String message) {
@@ -41,8 +41,10 @@ public abstract class Module {
             throw new IllegalStateException(String.format("\"init\" was not called for module %s", getModuleIdentifier()));
         }
         if (!skipStorage) {
-            logger.i(formatLogMessage("Stored value notified"), true);
-            listener.onModuleResult(getStorageResult());
+            Object storageResult = getStorageResult();
+            if (storageResult != null) {
+                listener.onModuleResult(storageResult);
+            }
         } else {
             logger.i(formatLogMessage("Skipping storage value"), true);
         }
@@ -60,6 +62,8 @@ public abstract class Module {
         Object stored = Hawk.get(getModuleIdentifier(), null);
         if (stored == null) {
             logger.i(formatLogMessage("No storage value"), true);
+        } else {
+            logger.i(formatLogMessage("Stored value notified"), true);
         }
         if (gson != null && stored != null) {
             stored = gson.fromJson(gson.toJsonTree(stored), getStorageTypeToken().getType());

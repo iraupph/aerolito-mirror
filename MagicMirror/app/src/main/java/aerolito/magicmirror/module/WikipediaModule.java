@@ -15,15 +15,16 @@ import aerolito.magicmirror.module.base.Module;
 
 public class WikipediaModule extends Module {
 
-    private final String WIKIPEDIA_BR_HOME = "https://pt.wikipedia.org/";
+    private static final String WIKIPEDIA_BR_HOME = "https://pt.wikipedia.org/";
+    private static final int TIMEOUT = 15 * 1000;
 
-    private final String RECENT_ELEMENT = "#mf-eventos-atuais ul";
-    private final String HISTORY_ELEMENT = ".plainlinks ul";
-    private final String ITEM_ELEMENT = "li";
+    private static final String RECENT_ELEMENT = "#mf-eventos-atuais ul";
+    private static final String HISTORY_ELEMENT = ".plainlinks ul";
+    private static final String ITEM_ELEMENT = "li";
 
-    private final String RECENT_TITLE = "Eventos recentes";
-    private final String HISTORY_TITLE = "O dia na história";
-    private final String BORN_TITLE = "Nasceu neste dia";
+    private static final String RECENT_TITLE = "Eventos recentes";
+    private static final String HISTORY_TITLE = "O dia na história";
+    private static final String BORN_TITLE = "Nasceu neste dia";
 
     private static WikipediaModule instance = new WikipediaModule();
 
@@ -43,7 +44,7 @@ public class WikipediaModule extends Module {
     protected Object getProcessedResult(Object... args) {
         List<Map.Entry<String, String>> titleAndEventList = null;
         try {
-            Document document = Jsoup.connect(WIKIPEDIA_BR_HOME).get();
+            Document document = Jsoup.connect(WIKIPEDIA_BR_HOME).timeout(TIMEOUT).get();
             Elements elementsEvents = document.select(RECENT_ELEMENT);
             Elements elementsTodayLists = document.select(HISTORY_ELEMENT);
 

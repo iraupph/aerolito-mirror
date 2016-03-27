@@ -35,6 +35,7 @@ import aerolito.magicmirror.R;
 import aerolito.magicmirror.module.DateModule;
 import aerolito.magicmirror.module.GreetingModule;
 import aerolito.magicmirror.module.LocationModule;
+import aerolito.magicmirror.module.TwitterModule;
 import aerolito.magicmirror.module.WeatherModule;
 import aerolito.magicmirror.module.WikipediaModule;
 import aerolito.magicmirror.module.base.Module;
@@ -62,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int SHIMMER_DURATION = 1500;
     private static final int SHIMMER_START_DELAY = 700;
 
+    private static final String DIGITS_THREAD = "DIGITS_THREAD";
+    private static final String HASHTAGS_THREAD = "HASHTAGS_THREAD";
+
     @Bind(R.id.location) TextView locationView;
     @Bind(R.id.date) TextView dateView;
     @Bind(R.id.forecasts) LinearLayout forecastsView;
@@ -70,6 +74,9 @@ public class MainActivity extends AppCompatActivity {
     @Bind(R.id.compliment_content) ShimmerTextView complimentContentView;
     @Bind(R.id.info_title) TextView infoTitleView;
     @Bind(R.id.info_content_text) TextView infoContentText;
+    @Bind(R.id.hashtags_title) TextView hashtagsTitleText;
+    @Bind(R.id.hashtags) TextView hashtagsText;
+    @Bind(R.id.mirror_hashtag) TextView mirrorHashtagText;
     // View que fica por cima do nosso conteúdo quando desliga o espelho
     @Bind(R.id.overlay) View overlayView;
 
@@ -94,6 +101,11 @@ public class MainActivity extends AppCompatActivity {
 
     private WikipediaModule wikipediaModule = WikipediaModule.getInstance();
     private Animation scrollHorizontallyAnimation;
+
+    private TwitterModule twitterModule = TwitterModule.getInstance();
+    private HashtagsTask hashtagsTask;
+    //    private Semaphore hashtagsSemaphore;
+    //    private Thread twitterResultThread;
 
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface", "JavascriptInterface"})
@@ -127,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         weatherModule.init(logger);
         greetingModule.init(logger);
         wikipediaModule.init(logger);
+        twitterModule.init(logger);
     }
 
     @Override
@@ -204,7 +217,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }, SLEEP_DELAY);
     }
-
 
     /**
      * Força fullscreen, escondendo a barra de status (topo) e navegação (em baixo) após um pequeno delay
@@ -372,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
                                         }
                                     }, GREETING_REVEAL_DELAY);
                                 }
-                            }).start();
+                            }, DIGITS_THREAD).start();
                         }
                     }, GREETING_REVEAL_DELAY);
                 }
@@ -391,6 +403,51 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        twitterModule.run(new Module.OnModuleResult() {
+            @Override
+            public void onModuleResult(Object result) {
+                final List<String> hashtags = (List<String>) result;
+                String[] hashtagsArray = hashtags.toArray(new String[hashtags.size()]);
+                if (hashtags.size() > 0) {
+                    if (hashtagsTask != null) {
+                        hashtagsTask.isRunning = false;
+                    }
+                    hashtagsTask = new HashtagsTask(hashtagsArray);
+                    hashtagsTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                    //                    if (twitterResultThread == null) {
+                    //                        twitterResultThread = new AsyncTask<Void, String, Void>(new Runnable() {
+                    //                            @Override
+                    //                            public void run() {
+                    //                                try {
+                    //                                    hashtagsSemaphore.acquire();
+                    //                                } catch (InterruptedException e) {
+                    //                                }
+                    //                                mirrorHashtagText.post(new Runnable() {
+                    //                                    @Override
+                    //                                    public void run() {
+                    //                                        hashtagsTitleText.setVisibility(View.VISIBLE);
+                    //                                        mirrorHashtagText.setVisibility(View.INVISIBLE);
+                    //                                        hashtagsText.setText("");
+                    //                                        delayHashtag(hashtags, 0);
+                    //                                    }
+                    //                                });
+                    //                            }
+                    //                        }, HASHTAGS_THREAD) {
+                    //                            @Override
+                    //                            protected Void doInBackground(Void... voids) {
+                    //                                return null;
+                    //                            }
+                    //                        };
+                    //                    } else {
+                    //                        if (twitterResultThread.isAlive()) {
+                    //                            twitterResultThread.interrupt();
+                    //                        }
+                    //                    }
+                    //                    twitterResultThread.start();
+                }
+            }
+
+        });
     }
 
     private void toggleTextView(TextView view, int visibility, @Nullable String text) {
@@ -403,10 +460,9 @@ public class MainActivity extends AppCompatActivity {
     private class EventsTask extends AsyncTask<Void, Map.Entry<String, String>, Void> {
 
         private boolean isRunning;
-
         private List<Map.Entry<String, String>> events;
 
-        private final Object displayingEventSemaphore = new Object();
+        private final Object displayingEventLock = new Object();
 
         private EventsTask(List<Map.Entry<String, String>> events) {
             this.events = events;
@@ -419,10 +475,6 @@ public class MainActivity extends AppCompatActivity {
 
         public void setRunning(boolean running) {
             isRunning = running;
-        }
-
-        public List<Map.Entry<String, String>> getEvents() {
-            return events;
         }
 
         public void setEvents(List<Map.Entry<String, String>> events) {
@@ -440,9 +492,9 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     }
                 }
-                synchronized (displayingEventSemaphore) {
+                synchronized (displayingEventLock) {
                     try {
-                        displayingEventSemaphore.wait();
+                        displayingEventLock.wait();
                     } catch (InterruptedException e) {
                     }
                 }
@@ -473,8 +525,8 @@ public class MainActivity extends AppCompatActivity {
                         public void onAnimationEnd(Animation animation) {
                             // Isso tira mais um flicker que não sei pq acontece :>
                             view.setVisibility(View.INVISIBLE);
-                            synchronized (displayingEventSemaphore) {
-                                displayingEventSemaphore.notify();
+                            synchronized (displayingEventLock) {
+                                displayingEventLock.notify();
                             }
                         }
 
@@ -496,6 +548,62 @@ public class MainActivity extends AppCompatActivity {
                 toggleTextView(infoContentText, View.INVISIBLE, content);
                 animateTicker(infoContentText, content.length() * 150L);
             }
+        }
+    }
+
+    private class HashtagsTask extends AsyncTask<Void, String, Void> {
+
+        private static final int HASHTAG_DELAY = 700;
+
+        private String[] hashtags;
+        private boolean isRunning;
+
+        private HashtagsTask(String[] hashtags) {
+            this.hashtags = hashtags;
+            this.isRunning = true;
+        }
+
+        public boolean isRunning() {
+            return isRunning;
+        }
+
+        public void setRunning(boolean running) {
+            isRunning = running;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                Thread.sleep(HASHTAG_DELAY);
+                publishProgress(hashtags);
+            } catch (InterruptedException e) {
+            }
+            return null;
+        }
+
+        private void delayHashtag(final String[] hashtags, final int i) {
+            final String hashtag = hashtags[i];
+            hashtagsText.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    String content = hashtagsText.getText().toString();
+                    hashtagsText.setText(String.format("%s %s", content, hashtag));
+                    if (isRunning && i < hashtags.length - 1 && i < 10) {
+                        delayHashtag(hashtags, i + 1);
+                    } else {
+                        mirrorHashtagText.setVisibility(View.VISIBLE);
+                    }
+                }
+            }, HASHTAG_DELAY);
+        }
+
+        @Override
+        protected void onProgressUpdate(String... values) {
+            super.onProgressUpdate(values);
+            hashtagsTitleText.setVisibility(View.VISIBLE);
+            mirrorHashtagText.setVisibility(View.INVISIBLE);
+            hashtagsText.setText("");
+            delayHashtag(values, 0);
         }
     }
 }
