@@ -24,7 +24,6 @@ public class WikipediaModule extends Module {
     private final String RECENT_TITLE = "Eventos recentes";
     private final String HISTORY_TITLE = "O dia na história";
     private final String BORN_TITLE = "Nasceu neste dia";
-    private final String DIED_TITLE = "Faleceu neste dia";
 
     private static WikipediaModule instance = new WikipediaModule();
 
@@ -60,8 +59,6 @@ public class WikipediaModule extends Module {
                         titleAndEventList.addAll(processItems(HISTORY_TITLE, elementsTodayLists.get(0)));
                     case 2:
                         titleAndEventList.addAll(processItems(BORN_TITLE, elementsTodayLists.get(1)));
-                    case 1:
-                        titleAndEventList.addAll(processItems(DIED_TITLE, elementsTodayLists.get(2)));
                 }
             }
         } catch (IOException e) {
@@ -73,7 +70,7 @@ public class WikipediaModule extends Module {
         List<Map.Entry<String, String>> items = new ArrayList<>();
         for (Element e : elements.select(ITEM_ELEMENT)) {
             // Alguns textos referenciam a imagem da seção no site. Tira fora esse texto
-            items.add(new AbstractMap.SimpleEntry<>(title, e.text().replaceAll("\\(.*imagem\\)", "")));
+            items.add(new AbstractMap.SimpleEntry<>(title, e.text().replaceAll(" \\(.*\\)", "")));
         }
         return items;
     }

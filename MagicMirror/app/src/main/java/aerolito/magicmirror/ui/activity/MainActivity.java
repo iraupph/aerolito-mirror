@@ -1,6 +1,7 @@
 package aerolito.magicmirror.ui.activity;
 
 import android.animation.ValueAnimator;
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -62,13 +63,13 @@ public class MainActivity extends AppCompatActivity {
     @Bind(R.id.location) TextView locationView;
     @Bind(R.id.date) TextView dateView;
     @Bind(R.id.forecasts) LinearLayout forecastsView;
+    @Bind(R.id.visitors) LinearLayout visitorsView;
     @Bind(R.id.compliment_title) TextView complimentTitleView;
     @Bind(R.id.compliment_content) ShimmerTextView complimentContentView;
     @Bind(R.id.info_title) TextView infoTitleView;
-    @Bind(R.id.info_content) TextView infoContentView;
+    @Bind(R.id.info_content_text) TextView infoContentText;
     // View que fica por cima do nosso conteúdo quando desliga o espelho
     @Bind(R.id.overlay) View overlayView;
-    @Bind(R.id.visitors) LinearLayout visitorsView;
 
     private Handler uiChangesHandler;
 
@@ -86,13 +87,14 @@ public class MainActivity extends AppCompatActivity {
             .setDuration(SHIMMER_DURATION)
             .setStartDelay(SHIMMER_START_DELAY)
             .setDirection(Shimmer.ANIMATION_DIRECTION_LTR);
-    private final Random visitorsRandom = new Random();
+    private final Random aRandom = new Random();
     private final Object digitsLock = new Object();
 
     private WikipediaModule wikipediaModule = WikipediaModule.getInstance();
     private Animation scrollHorizontallyAnimation;
 
 
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface", "JavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -267,8 +269,8 @@ public class MainActivity extends AppCompatActivity {
                 textView.post(new Runnable() {
                     @Override
                     public void run() {
-                        int startValue = visitorsRandom.nextInt(3);
-                        int endValue = visitorsRandom.nextInt(5) + 4;
+                        int startValue = aRandom.nextInt(3);
+                        int endValue = aRandom.nextInt(5) + 4;
                         final RepeatableCountAnimationTextView repeatableCountAnimationTextView =
                                 textView
                                         .setInterpolator(new LinearInterpolator())
@@ -299,9 +301,9 @@ public class MainActivity extends AppCompatActivity {
                                         int prevEndValue = (int) animatedValue;
                                         if (repeatCount != 0) {
                                             if (prevEndValue > 3) {
-                                                toValue = visitorsRandom.nextInt(3);
+                                                toValue = aRandom.nextInt(3);
                                             } else {
-                                                toValue = visitorsRandom.nextInt(5) + 4;
+                                                toValue = aRandom.nextInt(5) + 4;
                                             }
                                         } else {
                                             // Último é mais rápido pra ficar mais smooth
@@ -396,6 +398,7 @@ public class MainActivity extends AppCompatActivity {
         private boolean isRunning;
 
         private List<Map.Entry<String, String>> events;
+
         private final Object displayingEventSemaphore = new Object();
 
         private EventsTask(List<Map.Entry<String, String>> events) {
@@ -422,7 +425,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... voids) {
             while (isRunning) {
-                int newPosition = new Random().nextInt(events.size());
+                int newPosition = aRandom.nextInt(events.size());
                 for (int i = 0; i < events.size(); i++) {
                     Map.Entry<String, String> entry = events.get(i);
                     if (i == newPosition) {
@@ -440,46 +443,51 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
+        private void animateTicker(final View view, final long durationMillis) {
+            view.post(new Runnable() {
+                @Override
+                public void run() {
+                    // Scroll de fora da tela até um pouco mais por trás do título
+                    int fullScreenWidth = overlayView.getMeasuredWidth();
+                    int contentExtraWidth = fullScreenWidth - view.getMeasuredWidth();
+                    scrollHorizontallyAnimation = new TranslateAnimation(fullScreenWidth, (float) (-fullScreenWidth + contentExtraWidth), 0, 0);
+                    scrollHorizontallyAnimation.setInterpolator(new LinearInterpolator());
+                    scrollHorizontallyAnimation.setDuration(durationMillis);
+                    scrollHorizontallyAnimation.setAnimationListener(new Animation.AnimationListener() {
+                        @Override
+                        public void onAnimationStart(Animation animation) {
+                            /* Deixa INVISIBLE quando seta o texto pra não dar o flicker da posição original
+                            e quando deslocamos pra fora antes de começar a animação, daí aqui já pode mostrar
+                            pq ele já tá fora da tela ;-) */
+                            view.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animation animation) {
+                            // Isso tira mais um flicker que não sei pq acontece :>
+                            view.setVisibility(View.INVISIBLE);
+                            synchronized (displayingEventSemaphore) {
+                                displayingEventSemaphore.notify();
+                            }
+                        }
+
+                        @Override
+                        public void onAnimationRepeat(Animation animation) {
+                        }
+                    });
+                    view.setAnimation(scrollHorizontallyAnimation);
+                }
+            });
+        }
+
         @Override
         protected void onProgressUpdate(Map.Entry<String, String>... values) {
             super.onProgressUpdate(values);
             for (Map.Entry<String, String> nextNews : values) {
                 toggleTextView(infoTitleView, View.VISIBLE, nextNews.getKey());
-                toggleTextView(infoContentView, View.INVISIBLE, nextNews.getValue() + "\n");
-                infoContentView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Scroll de fora da tela até um pouco mais por trás do título
-                        int fullScreenWidth = overlayView.getMeasuredWidth();
-                        int contentExtraWidth = fullScreenWidth - infoContentView.getMeasuredWidth();
-                        scrollHorizontallyAnimation = new TranslateAnimation(fullScreenWidth, (float) (-fullScreenWidth + contentExtraWidth), 0, 0);
-                        scrollHorizontallyAnimation.setInterpolator(new LinearInterpolator());
-                        scrollHorizontallyAnimation.setDuration(infoContentView.getText().toString().length() * 1000L);
-                        scrollHorizontallyAnimation.setAnimationListener(new Animation.AnimationListener() {
-                            @Override
-                            public void onAnimationStart(Animation animation) {
-                                /* Deixa INVISIBLE quando seta o texto pra não dar o flicker da posição original
-                                e quando deslocamos pra fora antes de começar a animação, daí aqui já pode mostrar
-                                pq ele já tá fora da tela ;-) */
-                                toggleTextView(infoContentView, View.VISIBLE, null);
-                            }
-
-                            @Override
-                            public void onAnimationEnd(Animation animation) {
-                                // Isso tira mais um flicker que não sei pq acontece :>
-                                toggleTextView(infoContentView, View.INVISIBLE, null);
-                                synchronized (displayingEventSemaphore) {
-                                    displayingEventSemaphore.notify();
-                                }
-                            }
-
-                            @Override
-                            public void onAnimationRepeat(Animation animation) {
-                            }
-                        });
-                        infoContentView.setAnimation(scrollHorizontallyAnimation);
-                    }
-                });
+                final String content = nextNews.getValue();
+                toggleTextView(infoContentText, View.INVISIBLE, content);
+                animateTicker(infoContentText, content.length() * 150L);
             }
         }
     }

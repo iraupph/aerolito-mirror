@@ -115,20 +115,19 @@
 
         </LinearLayout>
 
-        <!-- Hack no 'maxLength' pra aumentar o número de caracteres sem quebrar a linha (cortar o texto) -->
         <TextView
-            android:id="@+id/info_content"
+            android:id="@+id/info_content_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
+            android:layout_marginEnd="2048dp"
             android:gravity="start"
-            android:maxLength="512"
             android:paddingEnd="0dp"
+            android:maxWidth="4096dp"
             android:paddingStart="8dp"
+            android:layout_alignParentBottom="true"
             android:singleLine="true"
             android:textSize="@dimen/material_text_title"
-            android:visibility="invisible"
-            tools:text="Aqui vamos ter uma mensagem bem longa, que pode ser maior que a largura da tela, nesse caso, espero que ela faça scroll de um lado pro outro e ao sair da tela, carregue a próxima"
+            tools:text="Aqui vamos ter uma mensagem que pode ser maior que o tamanho da tela. Queremos que ela aparece e scrolle por inteiro."
             tools:visibility="visible"/>
 
         <TextView
