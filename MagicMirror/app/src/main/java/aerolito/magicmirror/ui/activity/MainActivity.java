@@ -39,7 +39,6 @@ import aerolito.magicmirror.module.TwitterModule;
 import aerolito.magicmirror.module.WeatherModule;
 import aerolito.magicmirror.module.WikipediaModule;
 import aerolito.magicmirror.module.base.Module;
-import aerolito.magicmirror.ui.view.CustomDigitalClock;
 import aerolito.magicmirror.ui.view.RepeatableCountAnimationTextView;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
@@ -56,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int WAKE_UP_DELAY = 0;
 
     private static final int OFF_BRIGHTNESS = 0;
-    private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 115 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
+    private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 63 : 255; // Brilho é regulado de 0 até 255 (63 é 25%)
 
     private static final int MAX_FORECASTS = 3;
 
@@ -64,11 +63,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int SHIMMER_DURATION = 1500;
     private static final int SHIMMER_START_DELAY = 700;
 
-    private static final String DIGITS_THREAD = "DIGITS_THREAD";
-
     @Bind(R.id.location) TextView locationView;
     @Bind(R.id.date) TextView dateView;
-    @Bind(R.id.clock) CustomDigitalClock clockView;
     @Bind(R.id.forecasts) LinearLayout forecastsView;
     @Bind(R.id.visitors) LinearLayout visitorsView;
     @Bind(R.id.compliment_title) TextView complimentTitleView;
