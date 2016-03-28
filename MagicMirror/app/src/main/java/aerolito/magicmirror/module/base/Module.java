@@ -40,15 +40,15 @@ public abstract class Module {
         if (!initialized) {
             throw new IllegalStateException(String.format("\"init\" was not called for module %s", getModuleIdentifier()));
         }
+        Object storageResult = getStorageResult();
         if (!skipStorage) {
-            Object storageResult = getStorageResult();
             if (storageResult != null) {
                 listener.onModuleResult(storageResult);
             }
         } else {
             logger.i(formatLogMessage("Skipping storage value"), true);
         }
-        new ModuleProcessAsyncTask(listener, args).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        new ModuleProcessAsyncTask(listener, storageResult, args).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     protected abstract String getModuleIdentifier();
@@ -81,10 +81,12 @@ public abstract class Module {
     private class ModuleProcessAsyncTask extends AsyncTask<Void, Void, Object> {
 
         private final OnModuleResult listener;
+        private Object storageResult;
         private final Object[] args;
 
-        public ModuleProcessAsyncTask(OnModuleResult listener, Object[] args) {
+        public ModuleProcessAsyncTask(OnModuleResult listener, Object storageResult, Object[] args) {
             this.listener = listener;
+            this.storageResult = storageResult;
             this.args = args;
         }
 
@@ -97,12 +99,19 @@ public abstract class Module {
         @Override
         protected void onPostExecute(Object processedResult) {
             logger.i(formatLogMessage("Finished processing"), true);
-            if (processedResult != null) {
+            if (processedResult == null) {
+                if (storageResult != null) {
+                    processedResult = storageResult;
+                    logger.i(formatLogMessage("Fallback to storage value notified"), true);
+                } else {
+                    logger.i(formatLogMessage("No processing value"), true);
+                }
+            } else {
                 logger.i(formatLogMessage("Processed value notified"), true);
+            }
+            if (processedResult != null) {
                 listener.onModuleResult(processedResult);
                 putStorageResult(processedResult);
-            } else {
-                logger.i(formatLogMessage("No processing value"), true);
             }
         }
     }

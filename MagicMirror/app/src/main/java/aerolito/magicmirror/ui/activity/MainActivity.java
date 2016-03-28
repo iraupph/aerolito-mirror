@@ -422,7 +422,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-        });
+        }, true);
     }
 
     private void toggleTextView(TextView view, int visibility, @Nullable String text) {
@@ -529,7 +529,7 @@ public class MainActivity extends AppCompatActivity {
     private class HashtagsTask extends AsyncTask<Void, String, Void> {
 
         private static final int HASHTAG_DELAY = 700;
-        private static final int MAX_HASHTAGS = !BuildConfig.DEV ? 10 : 2;
+        private static final int MAX_HASHTAGS = !BuildConfig.DEV ? 10 : 3;
 
         private boolean isRunning;
         private String[] hashtags;
@@ -562,8 +562,6 @@ public class MainActivity extends AppCompatActivity {
                     hashtagsText.setText(String.format("%s %s", content, hashtag));
                     if (isRunning && i < MAX_HASHTAGS && i < hashtags.length - 1) {
                         delayHashtag(hashtags, i + 1);
-                    } else {
-                        mirrorHashtagText.setVisibility(View.VISIBLE);
                     }
                 }
             }, HASHTAG_DELAY);
@@ -572,8 +570,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onProgressUpdate(String... values) {
             super.onProgressUpdate(values);
-            hashtagsTitleText.setVisibility(View.VISIBLE);
-            mirrorHashtagText.setVisibility(View.INVISIBLE);
             hashtagsText.setText("");
             delayHashtag(values, 0);
         }

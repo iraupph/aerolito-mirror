@@ -46,15 +46,18 @@ android {
             applicationIdSuffix ".dev"
             buildConfigField 'boolean', 'DEV', 'true'
             buildConfigField 'boolean', 'FONT', 'false'
+            resValue "string", "app_name",  "d Magic Mirror"
         }
         devFont {
             applicationIdSuffix ".dev.font"
             buildConfigField 'boolean', 'DEV', 'true'
             buildConfigField 'boolean', 'FONT', 'true'
+            resValue "string", "app_name",  "df Magic Mirror"
         }
         demo {
             buildConfigField 'boolean', 'DEV', 'false'
             buildConfigField 'boolean', 'FONT', 'false'
+            resValue "string", "app_name",  "Magic Mirror"
         }
     }
 }
