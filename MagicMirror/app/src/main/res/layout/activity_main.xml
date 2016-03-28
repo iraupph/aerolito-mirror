@@ -166,7 +166,8 @@
                 android:text="Trending"
                 android:textAllCaps="true"
                 android:textSize="@dimen/material_text_display1"
-                android:visibility="visible"/>
+                android:visibility="invisible"
+                tools:visibility="visible"/>
 
             <me.grantland.widget.AutofitLayout
                 android:layout_width="match_parent"
@@ -175,7 +176,7 @@
                 <TextView
                     android:id="@+id/hashtags"
                     android:layout_width="match_parent"
-                    android:layout_height="96dp"
+                    android:layout_height="128dp"
                     android:gravity="end|center_vertical"
                     android:lineSpacingExtra="4dp"
                     android:maxLines="3"
@@ -188,9 +189,9 @@
                 android:id="@+id/mirror_hashtag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="#SmartMirrorAerolito"
                 android:textSize="@dimen/material_text_display2"
-                android:visibility="visible"
-                tools:text="#SmartMirrorAerolito"/>
+                android:visibility="visible"/>
 
         </LinearLayout>
 

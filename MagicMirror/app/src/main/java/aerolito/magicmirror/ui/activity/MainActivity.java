@@ -40,6 +40,7 @@ import aerolito.magicmirror.module.TwitterModule;
 import aerolito.magicmirror.module.WeatherModule;
 import aerolito.magicmirror.module.WikipediaModule;
 import aerolito.magicmirror.module.base.Module;
+import aerolito.magicmirror.ui.view.CustomDigitalClock;
 import aerolito.magicmirror.ui.view.RepeatableCountAnimationTextView;
 import aerolito.magicmirror.util.L;
 import butterknife.Bind;
@@ -50,13 +51,13 @@ public class MainActivity extends AppCompatActivity {
 
     public L logger;
 
-    private static final int HIDE_UI_DELAY = 5000;
+    private static final int HIDE_UI_DELAY = 1000;
 
     private static final int SLEEP_DELAY = !BuildConfig.DEV ? 30 * 1000 : 60 * 1000 * 15;
     private static final int WAKE_UP_DELAY = 0;
 
     private static final int OFF_BRIGHTNESS = 0;
-    private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 89 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
+    private static final int ON_BRIGHTNESS = !BuildConfig.DEV ? 115 : 255; // Brilho é regulado de 0 até 255 (89 é 35%)
 
     private static final int MAX_FORECASTS = 3;
 
@@ -68,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Bind(R.id.location) TextView locationView;
     @Bind(R.id.date) TextView dateView;
+    @Bind(R.id.clock) CustomDigitalClock clockView;
     @Bind(R.id.forecasts) LinearLayout forecastsView;
     @Bind(R.id.visitors) LinearLayout visitorsView;
     @Bind(R.id.compliment_title) TextView complimentTitleView;
@@ -138,13 +140,19 @@ public class MainActivity extends AppCompatActivity {
         twitterModule.init(logger);
 
         // Nossa fonte aparentemente não tem lowercase, usar span pra diferenciar
-        mirrorHashtagText.setText(new Spanny()
-                .append("#S", new RelativeSizeSpan(1f))
-                .append("mart", new RelativeSizeSpan(0.7f))
-                .append("M", new RelativeSizeSpan(1f))
-                .append("irror", new RelativeSizeSpan(0.7f))
-                .append("A", new RelativeSizeSpan(1f))
-                .append("erolito", new RelativeSizeSpan(0.7f)));
+        if (BuildConfig.FONT) {
+            mirrorHashtagText.setText(new Spanny()
+                    .append("#S", new RelativeSizeSpan(1f))
+                    .append("mart", new RelativeSizeSpan(0.7f))
+                    .append("M", new RelativeSizeSpan(1f))
+                    .append("irror", new RelativeSizeSpan(0.7f))
+                    .append("A", new RelativeSizeSpan(1f))
+                    .append("erolito", new RelativeSizeSpan(0.7f)));
+        } else {
+            locationView.setTextSize(getResources().getDimension(R.dimen.material_text_headline));
+            dateView.setTextSize(getResources().getDimension(R.dimen.material_text_headline));
+            clockView.setTextSize(getResources().getDimension(R.dimen.material_text_display3));
+        }
     }
 
     @Override
@@ -160,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
         if (eventsTask != null) {
             eventsTask.setRunning(false);
         }
+        setBrightness(ON_BRIGHTNESS);
     }
 
     @Override
@@ -193,8 +202,7 @@ public class MainActivity extends AppCompatActivity {
         wakeUpHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                ContentResolver cResolver = getApplicationContext().getContentResolver();
-                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, ON_BRIGHTNESS);
+                setBrightness(ON_BRIGHTNESS);
                 overlayView.setVisibility(View.INVISIBLE);
                 if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
@@ -216,8 +224,7 @@ public class MainActivity extends AppCompatActivity {
                 if (BuildConfig.DEV) {
                     Toast.makeText(getApplicationContext(), "SCREEN OFF", Toast.LENGTH_SHORT).show();
                 }
-                ContentResolver cResolver = getApplicationContext().getContentResolver();
-                Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, OFF_BRIGHTNESS);
+                setBrightness(OFF_BRIGHTNESS);
                 overlayView.setVisibility(View.VISIBLE);
             }
         }, SLEEP_DELAY);
@@ -237,6 +244,11 @@ public class MainActivity extends AppCompatActivity {
                 getWindow().getDecorView().setSystemUiVisibility(systemUiFlagHideNavigation);
             }
         }, HIDE_UI_DELAY);
+    }
+
+    private void setBrightness(int brightness) {
+        ContentResolver cResolver = getApplicationContext().getContentResolver();
+        Settings.System.putInt(cResolver, Settings.System.SCREEN_BRIGHTNESS, brightness);
     }
 
     private void onMirrorActive() {
@@ -423,6 +435,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }, true);
+        // TODO: Adicionar callback de "pré-execução"
     }
 
     private void toggleTextView(TextView view, int visibility, @Nullable String text) {
@@ -529,7 +542,7 @@ public class MainActivity extends AppCompatActivity {
     private class HashtagsTask extends AsyncTask<Void, String, Void> {
 
         private static final int HASHTAG_DELAY = 700;
-        private static final int MAX_HASHTAGS = !BuildConfig.DEV ? 10 : 3;
+        private static final int MAX_HASHTAGS = !BuildConfig.DEV ? 8 : 3;
 
         private boolean isRunning;
         private String[] hashtags;
@@ -570,6 +583,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onProgressUpdate(String... values) {
             super.onProgressUpdate(values);
+            hashtagsTitleText.setVisibility(View.VISIBLE);
             hashtagsText.setText("");
             delayHashtag(values, 0);
         }
