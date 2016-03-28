@@ -11,19 +11,19 @@ android {
         versionCode 1
         versionName "1.0"
     }
-//    signingConfigs {
-//        release {
-//            storeFile file("tomorrow.jks")
-//            storePassword "keytomorrow"
-//            keyAlias "Tomorrow"
-//            keyPassword "tomorrow"
-//        }
-//    }
+    signingConfigs {
+        release {
+            storeFile file("magicmirror.jks")
+            storePassword "senhadomagicmirror"
+            keyAlias "magicmirror"
+            keyPassword "senhadomagicmirror"
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-//            signingConfig = android.signingConfigs.release
+            signingConfig = android.signingConfigs.release
         }
         debug {
             applicationIdSuffix ".debug"
@@ -45,25 +45,11 @@ android {
         developing {
             applicationIdSuffix ".dev"
             buildConfigField 'boolean', 'DEV', 'true'
-            buildConfigField 'boolean', 'FONT', 'false'
-            resValue "string", "app_name", "d Magic Mirror"
+            resValue "string", "app_name", "dev-Magic Mirror"
         }
-        devFont {
-            applicationIdSuffix ".dev.font"
-            buildConfigField 'boolean', 'DEV', 'true'
-            buildConfigField 'boolean', 'FONT', 'true'
-            resValue "string", "app_name", "df Magic Mirror"
-        }
-        demo {
+        staging {
             buildConfigField 'boolean', 'DEV', 'false'
-            buildConfigField 'boolean', 'FONT', 'false'
             resValue "string", "app_name", "Magic Mirror"
-        }
-        demoFont {
-            applicationIdSuffix ".aerolito"
-            buildConfigField 'boolean', 'DEV', 'false'
-            buildConfigField 'boolean', 'FONT', 'true'
-            resValue "string", "app_name", "Aerolito Magic Mirror"
         }
     }
 }

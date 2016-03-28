@@ -21,7 +21,6 @@ import android.view.animation.TranslateAnimation;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.binaryfork.spanny.Spanny;
 import com.romainpiel.shimmer.Shimmer;
@@ -87,11 +86,15 @@ public class MainActivity extends AppCompatActivity {
     private Handler wakeUpHandler;
     private Handler sleepHandler;
 
+    private boolean isOn;
+
     private DateModule dateModule = DateModule.getInstance();
     private LocationModule locationModule = LocationModule.getInstance();
     private WeatherModule weatherModule = WeatherModule.getInstance();
 
     private GreetingModule greetingModule = GreetingModule.getInstance();
+    private GreetingTask greetingTask;
+
     private EventsTask eventsTask;
     private final Shimmer shimmer = new Shimmer()
             .setRepeatCount(ValueAnimator.INFINITE)
@@ -140,26 +143,22 @@ public class MainActivity extends AppCompatActivity {
         twitterModule.init(logger);
 
         // Nossa fonte aparentemente não tem lowercase, usar span pra diferenciar
-        if (BuildConfig.FONT) {
-            mirrorHashtagText.setText(new Spanny()
-                    .append("#S", new RelativeSizeSpan(1f))
-                    .append("mart", new RelativeSizeSpan(0.7f))
-                    .append("M", new RelativeSizeSpan(1f))
-                    .append("irror", new RelativeSizeSpan(0.7f))
-                    .append("A", new RelativeSizeSpan(1f))
-                    .append("erolito", new RelativeSizeSpan(0.7f)));
-        } else {
-            locationView.setTextSize(getResources().getDimension(R.dimen.material_text_headline));
-            dateView.setTextSize(getResources().getDimension(R.dimen.material_text_headline));
-            clockView.setTextSize(getResources().getDimension(R.dimen.material_text_display3));
-        }
+        mirrorHashtagText.setText(new Spanny()
+                .append("#S", new RelativeSizeSpan(1f))
+                .append("mart", new RelativeSizeSpan(0.7f))
+                .append("M", new RelativeSizeSpan(1f))
+                .append("irror", new RelativeSizeSpan(0.7f))
+                .append("A", new RelativeSizeSpan(1f))
+                .append("erolito", new RelativeSizeSpan(0.7f)));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         makeFullscreen();
-        onMirrorActive();
+        if (!isOn || BuildConfig.DEV) {
+            onMirrorActive();
+        }
     }
 
     @Override
@@ -175,7 +174,9 @@ public class MainActivity extends AppCompatActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_HEADSETHOOK) {
             logger.i("Received Jack input", true);
-            onMirrorActive();
+            if (!isOn || BuildConfig.DEV) {
+                onMirrorActive();
+            }
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -203,10 +204,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 setBrightness(ON_BRIGHTNESS);
+                isOn = true;
                 overlayView.setVisibility(View.INVISIBLE);
-                if (BuildConfig.DEV) {
-                    Toast.makeText(getApplicationContext(), "SCREEN ON", Toast.LENGTH_SHORT).show();
-                }
+                logger.i("Screen On");
             }
         }, WAKE_UP_DELAY);
     }
@@ -221,11 +221,10 @@ public class MainActivity extends AppCompatActivity {
         sleepHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (BuildConfig.DEV) {
-                    Toast.makeText(getApplicationContext(), "SCREEN OFF", Toast.LENGTH_SHORT).show();
-                }
                 setBrightness(OFF_BRIGHTNESS);
+                isOn = false;
                 overlayView.setVisibility(View.VISIBLE);
+                logger.i("Screen Off");
             }
         }, SLEEP_DELAY);
     }
@@ -301,109 +300,14 @@ public class MainActivity extends AppCompatActivity {
 
         );
         greetingModule.run(new Module.OnModuleResult() {
-            private void startCountdown(final RepeatableCountAnimationTextView textView, final int repeats, final char finalValue, final boolean isLastDigit) {
-                textView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        int startValue = aRandom.nextInt(3);
-                        int endValue = aRandom.nextInt(5) + 4;
-                        final RepeatableCountAnimationTextView repeatableCountAnimationTextView =
-                                textView
-                                        .setInterpolator(new LinearInterpolator())
-                                        .setAnimationDuration(500)
-                                        .setRepeatCount(repeats)
-                                        .setCountValues(startValue, endValue);
-                        repeatableCountAnimationTextView
-                                .setCountAnimationListener(new RepeatableCountAnimationTextView.CountAnimationListener() {
-                                    @Override
-                                    public void onAnimationStart(Object animatedValue) {
-                                    }
-
-                                    @Override
-                                    public void onAnimationEnd(Object animatedValue) {
-                                        if (isLastDigit) {
-                                            synchronized (digitsLock) {
-                                                digitsLock.notify();
-                                            }
-                                        }
-                                    }
-
-                                    @Override
-                                    public void onAnimationRepeat(Object animatedValue, int repeatCount) {
-                                        // Começa do final anterior pra não dar flicker na troca de número
-                                        // e o final é dependente dele também (decrementa ou incrementa)
-                                        // Ou vai até o valor final se é última repetição
-                                        int toValue;
-                                        int prevEndValue = (int) animatedValue;
-                                        if (repeatCount != 0) {
-                                            if (prevEndValue > 3) {
-                                                toValue = aRandom.nextInt(3);
-                                            } else {
-                                                toValue = aRandom.nextInt(5) + 4;
-                                            }
-                                        } else {
-                                            // Último é mais rápido pra ficar mais smooth
-                                            repeatableCountAnimationTextView.setAnimationDuration(100);
-                                            toValue = Integer.valueOf(String.valueOf(finalValue));
-                                        }
-                                        repeatableCountAnimationTextView.setCountValues(prevEndValue, toValue);
-                                    }
-                                });
-                        repeatableCountAnimationTextView.startCountAnimation();
-                    }
-                });
-            }
-
             @Override
             public void onModuleResult(Object result) {
                 final Pair<String, String> visitorsAndCompliment = (Pair<String, String>) result;
                 if (visitorsAndCompliment != null) {
-                    for (int i = 0; i < visitorsView.getChildCount(); i++) {
-                        visitorsView.getChildAt(i).setVisibility(View.INVISIBLE);
+                    if (greetingTask == null || !greetingTask.isRunning()) {
+                        greetingTask = new GreetingTask(visitorsAndCompliment);
+                        greetingTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                     }
-                    complimentTitleView.setVisibility(View.INVISIBLE);
-                    complimentContentView.setVisibility(View.INVISIBLE);
-                    final String visitorsStr = visitorsAndCompliment.first;
-                    visitorsView.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            for (int i = 0; i < visitorsView.getChildCount(); i++) {
-                                visitorsView.getChildAt(i).setVisibility(View.VISIBLE);
-                                int repeats = visitorsView.getChildCount() + i;
-                                startCountdown((RepeatableCountAnimationTextView) visitorsView.getChildAt(i), repeats, visitorsStr.charAt(i), i == visitorsView.getChildCount() - 1);
-                            }
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    synchronized (digitsLock) {
-                                        try {
-                                            digitsLock.wait();
-                                        } catch (InterruptedException e) {
-                                        }
-                                    }
-                                    complimentTitleView.postDelayed(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            complimentTitleView.setVisibility(View.VISIBLE);
-                                            complimentContentView.postDelayed(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    complimentContentView.setText(visitorsAndCompliment.second);
-                                                    complimentContentView.post(new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                                                            complimentContentView.setVisibility(View.VISIBLE);
-                                                            shimmer.start(complimentContentView);
-                                                        }
-                                                    });
-                                                }
-                                            }, GREETING_REVEAL_DELAY);
-                                        }
-                                    }, GREETING_REVEAL_DELAY);
-                                }
-                            }, DIGITS_THREAD).start();
-                        }
-                    }, GREETING_REVEAL_DELAY);
                 }
             }
         }, true);
@@ -588,4 +492,118 @@ public class MainActivity extends AppCompatActivity {
             delayHashtag(values, 0);
         }
     }
+
+    private class GreetingTask extends AsyncTask<Void, Pair<String, String>, Void> {
+
+        private boolean isRunning;
+        private Pair<String, String> visitorsAndCompliment;
+
+        private GreetingTask(Pair<String, String> visitorsAndCompliment) {
+            this.visitorsAndCompliment = visitorsAndCompliment;
+            this.isRunning = true;
+        }
+
+        public boolean isRunning() {
+            return isRunning;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            publishProgress(visitorsAndCompliment);
+            return null;
+        }
+
+        private void startCountdown(final RepeatableCountAnimationTextView textView, final int repeats, final char finalValue, final boolean isLastDigit) {
+            textView.post(new Runnable() {
+                @Override
+                public void run() {
+                    int startValue = aRandom.nextInt(3);
+                    int endValue = aRandom.nextInt(5) + 4;
+                    final RepeatableCountAnimationTextView repeatableCountAnimationTextView =
+                            textView
+                                    .setInterpolator(new LinearInterpolator())
+                                    .setAnimationDuration(500)
+                                    .setRepeatCount(repeats)
+                                    .setCountValues(startValue, endValue);
+                    repeatableCountAnimationTextView
+                            .setCountAnimationListener(new RepeatableCountAnimationTextView.CountAnimationListener() {
+                                @Override
+                                public void onAnimationStart(Object animatedValue) {
+                                }
+
+                                @Override
+                                public void onAnimationEnd(Object animatedValue) {
+                                    if (isLastDigit) {
+                                        isRunning = false;
+                                    }
+                                }
+
+                                @Override
+                                public void onAnimationRepeat(Object animatedValue, int repeatCount) {
+                                    // Começa do final anterior pra não dar flicker na troca de número
+                                    // e o final é dependente dele também (decrementa ou incrementa)
+                                    // Ou vai até o valor final se é última repetição
+                                    int toValue;
+                                    int prevEndValue = (int) animatedValue;
+                                    if (repeatCount != 0) {
+                                        if (prevEndValue > 3) {
+                                            toValue = aRandom.nextInt(3);
+                                        } else {
+                                            toValue = aRandom.nextInt(5) + 4;
+                                        }
+                                    } else {
+                                        // Último é mais rápido pra ficar mais smooth
+                                        repeatableCountAnimationTextView.setAnimationDuration(100);
+                                        toValue = Integer.valueOf(String.valueOf(finalValue));
+                                    }
+                                    repeatableCountAnimationTextView.setCountValues(prevEndValue, toValue);
+                                }
+                            });
+                    repeatableCountAnimationTextView.startCountAnimation();
+                }
+            });
+        }
+
+        @Override
+        protected void onProgressUpdate(Pair<String, String>... values) {
+            super.onProgressUpdate(values);
+            final Pair<String, String> visitorsAndCompliment = values[0];
+            for (int i = 0; i < visitorsView.getChildCount(); i++) {
+                visitorsView.getChildAt(i).setVisibility(View.INVISIBLE);
+            }
+            complimentTitleView.setVisibility(View.INVISIBLE);
+            complimentContentView.setVisibility(View.INVISIBLE);
+            final String visitorsStr = visitorsAndCompliment.first;
+            visitorsView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < visitorsView.getChildCount(); i++) {
+                        visitorsView.getChildAt(i).setVisibility(View.VISIBLE);
+                        int repeats = visitorsView.getChildCount() + i;
+                        startCountdown((RepeatableCountAnimationTextView) visitorsView.getChildAt(i), repeats, visitorsStr.charAt(i), i == visitorsView.getChildCount() - 1);
+                    }
+                    complimentTitleView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            complimentTitleView.setVisibility(View.VISIBLE);
+                            complimentContentView.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    complimentContentView.setText(visitorsAndCompliment.second);
+                                    complimentContentView.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            complimentContentView.setVisibility(View.VISIBLE);
+                                            shimmer.start(complimentContentView);
+                                        }
+                                    });
+                                }
+                            }, GREETING_REVEAL_DELAY);
+                        }
+                    }, GREETING_REVEAL_DELAY);
+                }
+            }, GREETING_REVEAL_DELAY);
+        }
+    }
+
 }

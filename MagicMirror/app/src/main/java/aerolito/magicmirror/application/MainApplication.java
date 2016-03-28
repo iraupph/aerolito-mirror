@@ -24,13 +24,10 @@ public class MainApplication extends Application {
         }
         hawkBuilder.build();
 
-        if (BuildConfig.FONT) {
-            CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
-//                    .setDefaultFontPath("font/Athelas.ttc")
-                    .setDefaultFontPath("font/Arvil_Sans.ttf")
-                    .setFontAttrId(R.attr.fontPath)
-                    .build()
-            );
-        }
+        CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
+                .setDefaultFontPath("font/Arvil_Sans.ttf")
+                .setFontAttrId(R.attr.fontPath)
+                .build()
+        );
     }
 }
