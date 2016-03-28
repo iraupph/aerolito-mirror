@@ -12,4 +12,11 @@
     <dimen name="material_text_display2">45sp</dimen>
     <dimen name="material_text_display3">56sp</dimen>
     <dimen name="material_text_display4">112sp</dimen>
+
+    <dimen name="tiny">24sp</dimen>
+    <dimen name="small">40sp</dimen>
+    <dimen name="smellium">48sp</dimen> <!-- I just invented a new size! -->
+    <dimen name="medium">56sp</dimen>
+    <dimen name="big">64sp</dimen>
 </resources>
+

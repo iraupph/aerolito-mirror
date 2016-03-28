@@ -21,7 +21,7 @@
             android:layout_alignParentTop="true"
             android:gravity="end"
             android:textAllCaps="true"
-            android:textSize="@dimen/material_text_display2"
+            android:textSize="@dimen/medium"
             android:visibility="invisible"
             tools:text="Porto Alegre"
             tools:visibility="visible"/>
@@ -34,7 +34,7 @@
             android:layout_below="@id/location"
             android:gravity="end"
             android:textAllCaps="true"
-            android:textSize="@dimen/material_text_display2"
+            android:textSize="@dimen/medium"
             android:visibility="invisible"
             tools:text="Quarta, 25 de Setembro"
             tools:visibility="visible"/>
@@ -45,7 +45,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_below="@id/date"
-            android:textSize="@dimen/material_text_display4"/>
+            android:textSize="@dimen/big"/>
 
         <!-- Previsão do tempo -->
         <LinearLayout
@@ -78,7 +78,7 @@
                 android:layout_height="wrap_content"
                 android:text="Você é o visitante número"
                 android:textAllCaps="true"
-                android:textSize="@dimen/material_text_display1"/>
+                android:textSize="@dimen/small"/>
 
             <LinearLayout
                 android:id="@+id/visitors"
@@ -102,7 +102,7 @@
                 android:layout_height="wrap_content"
                 android:text="E hoje você está"
                 android:textAllCaps="true"
-                android:textSize="@dimen/material_text_display1"
+                android:textSize="@dimen/small"
                 android:visibility="invisible"
                 tools:visibility="visible"/>
 
@@ -111,7 +111,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAllCaps="true"
-                android:textSize="@dimen/material_text_display3"
+                android:textSize="@dimen/big"
                 android:visibility="invisible"
                 tools:text="Radiante"
                 tools:visibility="visible"/>
@@ -130,7 +130,7 @@
             android:paddingEnd="0dp"
             android:paddingStart="8dp"
             android:singleLine="true"
-            android:textSize="@dimen/material_text_title"
+            android:textSize="@dimen/tiny"
             tools:text="Aqui vamos ter uma mensagem que pode ser maior que o tamanho da tela. Queremos que ela aparece e scrolle por inteiro."
             tools:visibility="visible"/>
 
@@ -145,7 +145,7 @@
             android:paddingEnd="8dp"
             android:paddingStart="0dp"
             android:textAllCaps="true"
-            android:textSize="@dimen/material_text_title"
+            android:textSize="@dimen/tiny"
             android:visibility="invisible"
             tools:text="Eventos recentes"
             tools:visibility="visible"/>
@@ -165,7 +165,7 @@
                 android:layout_height="wrap_content"
                 android:text="Trending"
                 android:textAllCaps="true"
-                android:textSize="@dimen/material_text_display1"
+                android:textSize="@dimen/small"
                 android:visibility="invisible"
                 tools:visibility="visible"/>
 
@@ -180,7 +180,7 @@
                     android:gravity="end|center_vertical"
                     android:lineSpacingExtra="4dp"
                     android:maxLines="3"
-                    android:textSize="@dimen/material_text_display1"
+                    android:textSize="@dimen/smellium"
                     tools:text="#Aerolito #MagicMirror #FriendsOfTomorrow #Perestroika"/>
 
             </me.grantland.widget.AutofitLayout>
@@ -190,7 +190,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="#SmartMirrorAerolito"
-                android:textSize="@dimen/material_text_display2"
+                android:textSize="@dimen/medium"
                 android:visibility="visible"/>
 
         </LinearLayout>
